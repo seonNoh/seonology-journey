@@ -44,7 +44,7 @@ spec:
       containers:
         - name: back
           image: ghcr.io/seonnoh/seonology-journey-back:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: grpc
               containerPort: 9090

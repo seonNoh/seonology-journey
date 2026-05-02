@@ -29,7 +29,7 @@ spec:
       containers:
         - name: web
           image: ghcr.io/seonnoh/seonology-journey-web:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
