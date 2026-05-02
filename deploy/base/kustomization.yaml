@@ -13,5 +13,8 @@ resources:
   - servicemonitor.yaml
   - networkpolicy.yaml
 
-commonLabels:
-  app.kubernetes.io/part-of: seonology-journey
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: seonology-journey
+    includeSelectors: false
+    includeTemplates: false
