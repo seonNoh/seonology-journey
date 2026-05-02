@@ -13,15 +13,44 @@ android {
         applicationId = "com.seonology.journey"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // versionCode/versionName: CI 가 ANDROID_VERSION_CODE / ANDROID_VERSION_NAME 환경변수로 주입.
+        versionCode = (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("ANDROID_VERSION_NAME") ?: "0.1.0"
 
         // AppAuth redirect scheme.
         manifestPlaceholders["appAuthRedirectScheme"] = "com.seonology.journey"
 
         buildConfigField("String", "API_BASE", "\"https://journey-api.seonology.com\"")
-        buildConfigField("String", "KEYCLOAK_ISSUER", "\"https://keycloak.seonology.com/realms/seonology\"")
-        buildConfigField("String", "KEYCLOAK_CLIENT_ID", "\"seonology-journey-android\"")
+        buildConfigField("String", "KEYCLOAK_ISSUER", "\"https://auth.seonology.com/realms/seonology\"")
+        buildConfigField("String", "KEYCLOAK_CLIENT_ID", "\"journey-android\"")
+    }
+
+    signingConfigs {
+        create("release") {
+            // CI 에서 secrets 로 keystore 를 주입하지 않은 경우 debug keystore 로 폴백한다.
+            val ksPath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (ksPath != null && file(ksPath).exists()) {
+                storeFile = file(ksPath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+            } else {
+                val debugKs = file(System.getProperty("user.home") + "/.android/debug.keystore")
+                if (debugKs.exists()) {
+                    storeFile = debugKs
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 
     buildFeatures {
