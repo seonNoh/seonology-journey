@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Clock, Plus, Trash2, GripVertical } from 'lucide-react'
+import {
+  ArrowLeft,
+  Clock,
+  Plus,
+  Trash2,
+  GripVertical,
+  Utensils,
+  BedDouble,
+  Pencil,
+} from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -18,7 +27,30 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../lib/api'
-import type { CreateScheduleInput, ListSchedulesResponse, Schedule } from '../lib/types'
+import type {
+  Accommodation,
+  CreateScheduleInput,
+  ListMealsResponse,
+  ListSchedulesResponse,
+  Meal,
+  MealSource,
+  MealType,
+  Money,
+  Schedule,
+} from '../lib/types'
+
+const MEAL_TYPES: { value: Exclude<MealType, 'MEAL_TYPE_UNSPECIFIED'>; label: string }[] = [
+  { value: 'MEAL_TYPE_BREAKFAST', label: '아침' },
+  { value: 'MEAL_TYPE_LUNCH', label: '점심' },
+  { value: 'MEAL_TYPE_DINNER', label: '저녁' },
+]
+
+const MEAL_SOURCES: { value: MealSource; label: string }[] = [
+  { value: 'MEAL_SOURCE_HOTEL', label: '호텔식' },
+  { value: 'MEAL_SOURCE_LOCAL', label: '현지식' },
+  { value: 'MEAL_SOURCE_CONVENIENCE', label: '편의점/도시락' },
+  { value: 'MEAL_SOURCE_SKIP', label: '거름' },
+]
 
 export function DayDetailPage() {
   const { dayId = '' } = useParams()
@@ -119,6 +151,9 @@ export function DayDetailPage() {
           pending={createMut.isPending}
         />
       )}
+
+      <MealSection dayId={dayId} />
+      <AccommodationSection dayId={dayId} />
     </section>
   )
 }
@@ -301,5 +336,411 @@ function Field({
         className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 focus:border-sakura-400 focus:outline-none"
       />
     </label>
+  )
+}
+
+// =====================
+// Meal section
+// =====================
+
+function MealSection({ dayId }: { dayId: string }) {
+  const qc = useQueryClient()
+  const [editing, setEditing] = useState<MealType | null>(null)
+
+  const list = useQuery({
+    queryKey: ['meals', dayId],
+    queryFn: () => api.get<ListMealsResponse>(`/days/${dayId}/meals`),
+    enabled: !!dayId,
+  })
+
+  const upsertMut = useMutation({
+    mutationFn: (m: Partial<Meal> & { mealType: MealType }) =>
+      api.put(`/days/${dayId}/meals`, m),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['meals', dayId] })
+      setEditing(null)
+    },
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: (mealType: MealType) => api.del(`/days/${dayId}/meals/${mealType}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals', dayId] }),
+  })
+
+  const byType = new Map((list.data?.meals ?? []).map((m) => [m.mealType, m]))
+
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-sm">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-bold text-slate-800">
+        <Utensils className="h-4 w-4 text-sakura-500" /> 식사
+      </h2>
+      <ul className="space-y-2">
+        {MEAL_TYPES.map(({ value, label }) => {
+          const meal = byType.get(value)
+          return (
+            <li
+              key={value}
+              className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2"
+            >
+              <div className="flex-1">
+                <p className="text-xs text-slate-500">{label}</p>
+                {meal ? (
+                  <p className="text-sm text-slate-700">
+                    {meal.restaurantName || meal.menu || '(메모 없음)'}
+                    {meal.cost?.amount ? (
+                      <span className="ml-2 text-sakura-600">
+                        {meal.cost.amount} {meal.cost.currency}
+                      </span>
+                    ) : null}
+                  </p>
+                ) : (
+                  <p className="text-sm text-slate-400">미설정</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditing(value)}
+                  className="rounded-md p-1 text-slate-400 hover:bg-sakura-50 hover:text-sakura-600"
+                  aria-label="편집"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                {meal && (
+                  <button
+                    onClick={() => deleteMut.mutate(value)}
+                    className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    aria-label="삭제"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+      {editing && (
+        <MealEditModal
+          dayId={dayId}
+          mealType={editing}
+          initial={byType.get(editing)}
+          onClose={() => setEditing(null)}
+          onSubmit={(m) => upsertMut.mutate(m)}
+          pending={upsertMut.isPending}
+        />
+      )}
+    </div>
+  )
+}
+
+function MealEditModal({
+  mealType,
+  initial,
+  onClose,
+  onSubmit,
+  pending,
+}: {
+  dayId: string
+  mealType: MealType
+  initial?: Meal
+  onClose: () => void
+  onSubmit: (m: Partial<Meal> & { mealType: MealType }) => void
+  pending: boolean
+}) {
+  const [form, setForm] = useState({
+    source: (initial?.source ?? 'MEAL_SOURCE_LOCAL') as MealSource,
+    restaurantName: initial?.restaurantName ?? '',
+    menu: initial?.menu ?? '',
+    rating: String(initial?.rating ?? ''),
+    review: initial?.review ?? '',
+    costAmount: initial?.cost?.amount ? String(initial.cost.amount) : '',
+    costCurrency: initial?.cost?.currency ?? 'JPY',
+  })
+  const label = MEAL_TYPES.find((t) => t.value === mealType)?.label ?? ''
+  return (
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-slate-800">{label} 입력</h2>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const cost: Money | undefined = form.costAmount
+              ? { currency: form.costCurrency, amount: Number(form.costAmount) }
+              : undefined
+            onSubmit({
+              mealType,
+              source: form.source,
+              restaurantName: form.restaurantName || undefined,
+              menu: form.menu || undefined,
+              rating: form.rating ? Number(form.rating) : undefined,
+              review: form.review || undefined,
+              cost,
+            })
+          }}
+        >
+          <label className="block">
+            <span className="text-sm text-slate-700">유형</span>
+            <select
+              value={form.source}
+              onChange={(e) =>
+                setForm({ ...form, source: e.target.value as MealSource })
+              }
+              className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2"
+            >
+              {MEAL_SOURCES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Field
+            label="식당"
+            value={form.restaurantName}
+            onChange={(v) => setForm({ ...form, restaurantName: v })}
+          />
+          <Field
+            label="메뉴"
+            value={form.menu}
+            onChange={(v) => setForm({ ...form, menu: v })}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Field
+              label="비용"
+              type="number"
+              value={form.costAmount}
+              onChange={(v) => setForm({ ...form, costAmount: v })}
+            />
+            <Field
+              label="통화"
+              value={form.costCurrency}
+              onChange={(v) => setForm({ ...form, costCurrency: v })}
+            />
+          </div>
+          <Field
+            label="평점 (1-5)"
+            type="number"
+            value={form.rating}
+            onChange={(v) => setForm({ ...form, rating: v })}
+          />
+          <Field
+            label="후기"
+            value={form.review}
+            onChange={(v) => setForm({ ...form, review: v })}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="rounded-md border px-3 py-1.5">
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-md bg-sakura-500 px-3 py-1.5 text-white disabled:opacity-50"
+            >
+              {pending ? '저장 중…' : '저장'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// =====================
+// Accommodation section
+// =====================
+
+function AccommodationSection({ dayId }: { dayId: string }) {
+  const qc = useQueryClient()
+  const [editing, setEditing] = useState(false)
+
+  const get = useQuery({
+    queryKey: ['accommodation', dayId],
+    queryFn: async () => {
+      try {
+        return await api.get<{ accommodation?: Accommodation }>(
+          `/days/${dayId}/accommodation`,
+        )
+      } catch (e) {
+        // 미설정이면 404 가능 — 빈 응답으로 처리
+        if ((e as Error).message.includes('404')) return { accommodation: undefined }
+        throw e
+      }
+    },
+    enabled: !!dayId,
+  })
+
+  const upsertMut = useMutation({
+    mutationFn: (a: Partial<Accommodation>) =>
+      api.put(`/days/${dayId}/accommodation`, a),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['accommodation', dayId] })
+      setEditing(false)
+    },
+  })
+
+  const deleteMut = useMutation({
+    mutationFn: () => api.del(`/days/${dayId}/accommodation`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['accommodation', dayId] }),
+  })
+
+  const a = get.data?.accommodation
+
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-base font-bold text-slate-800">
+          <BedDouble className="h-4 w-4 text-sakura-500" /> 숙박
+        </h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded-md p-1 text-slate-400 hover:bg-sakura-50 hover:text-sakura-600"
+            aria-label="편집"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          {a && (
+            <button
+              onClick={() => deleteMut.mutate()}
+              className="rounded-md p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+              aria-label="삭제"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      {a ? (
+        <div className="space-y-1 text-sm">
+          <p className="font-bold text-slate-800">{a.name}</p>
+          {a.address && <p className="text-slate-500">{a.address}</p>}
+          {(a.checkInTime || a.checkOutTime) && (
+            <p className="text-slate-500">
+              체크인 {a.checkInTime ?? '-'} / 체크아웃 {a.checkOutTime ?? '-'}
+            </p>
+          )}
+          {a.cost?.amount ? (
+            <p className="text-sakura-600">
+              {a.cost.amount} {a.cost.currency}
+            </p>
+          ) : null}
+          {a.amenities && <p className="text-slate-500">시설: {a.amenities}</p>}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">아직 등록된 숙소가 없습니다.</p>
+      )}
+      {editing && (
+        <AccommodationEditModal
+          initial={a}
+          onClose={() => setEditing(false)}
+          onSubmit={(v) => upsertMut.mutate(v)}
+          pending={upsertMut.isPending}
+        />
+      )}
+    </div>
+  )
+}
+
+function AccommodationEditModal({
+  initial,
+  onClose,
+  onSubmit,
+  pending,
+}: {
+  initial?: Accommodation
+  onClose: () => void
+  onSubmit: (a: Partial<Accommodation>) => void
+  pending: boolean
+}) {
+  const [form, setForm] = useState({
+    name: initial?.name ?? '',
+    address: initial?.address ?? '',
+    checkInTime: initial?.checkInTime ?? '',
+    checkOutTime: initial?.checkOutTime ?? '',
+    amenities: initial?.amenities ?? '',
+    costAmount: initial?.cost?.amount ? String(initial.cost.amount) : '',
+    costCurrency: initial?.cost?.currency ?? 'JPY',
+  })
+  return (
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-slate-800">숙소 입력</h2>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const cost: Money | undefined = form.costAmount
+              ? { currency: form.costCurrency, amount: Number(form.costAmount) }
+              : undefined
+            onSubmit({
+              name: form.name,
+              address: form.address || undefined,
+              checkInTime: form.checkInTime || undefined,
+              checkOutTime: form.checkOutTime || undefined,
+              amenities: form.amenities || undefined,
+              cost,
+            })
+          }}
+        >
+          <Field
+            label="숙소명"
+            required
+            value={form.name}
+            onChange={(v) => setForm({ ...form, name: v })}
+          />
+          <Field
+            label="주소"
+            value={form.address}
+            onChange={(v) => setForm({ ...form, address: v })}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Field
+              label="체크인"
+              type="time"
+              value={form.checkInTime}
+              onChange={(v) => setForm({ ...form, checkInTime: v })}
+            />
+            <Field
+              label="체크아웃"
+              type="time"
+              value={form.checkOutTime}
+              onChange={(v) => setForm({ ...form, checkOutTime: v })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Field
+              label="비용"
+              type="number"
+              value={form.costAmount}
+              onChange={(v) => setForm({ ...form, costAmount: v })}
+            />
+            <Field
+              label="통화"
+              value={form.costCurrency}
+              onChange={(v) => setForm({ ...form, costCurrency: v })}
+            />
+          </div>
+          <Field
+            label="시설/조식 등"
+            value={form.amenities}
+            onChange={(v) => setForm({ ...form, amenities: v })}
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="rounded-md border px-3 py-1.5">
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={pending || !form.name}
+              className="rounded-md bg-sakura-500 px-3 py-1.5 text-white disabled:opacity-50"
+            >
+              {pending ? '저장 중…' : '저장'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
