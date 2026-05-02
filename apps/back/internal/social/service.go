@@ -136,8 +136,8 @@ func (s *CompanionService) Remove(ctx context.Context, tripID, memberID string) 
 // TagRepo - 메모리.
 type TagRepo struct {
 	mu      sync.RWMutex
-	tags    map[string]*journeyv1.Tag       // tagID -> Tag
-	tripTag map[string]map[string]struct{}  // tripID -> tagID set
+	tags    map[string]*journeyv1.Tag      // tagID -> Tag
+	tripTag map[string]map[string]struct{} // tripID -> tagID set
 }
 
 // NewTagRepo - 생성.

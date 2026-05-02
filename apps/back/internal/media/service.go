@@ -154,10 +154,12 @@ type Service struct {
 // NewService - 생성.
 func NewService(repo Repository, pres Presigner) *Service {
 	return &Service{
-		repo:  repo,
-		pres:  pres,
-		now:   time.Now,
-		keyer: func(tripID, mediaID, filename string) string { return fmt.Sprintf("trips/%s/%s/%s", tripID, mediaID, filename) },
+		repo: repo,
+		pres: pres,
+		now:  time.Now,
+		keyer: func(tripID, mediaID, filename string) string {
+			return fmt.Sprintf("trips/%s/%s/%s", tripID, mediaID, filename)
+		},
 	}
 }
 

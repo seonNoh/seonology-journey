@@ -546,16 +546,16 @@ func NewReservationService(repo *ReservationRepo) *ReservationService {
 func (s *ReservationService) Create(ctx context.Context, req *journeyv1.CreateReservationRequest) (*journeyv1.Reservation, error) {
 	now := timestamppb.New(s.now().UTC())
 	v := &journeyv1.Reservation{
-		Id:               uuid.NewString(),
-		TripId:           req.GetTripId(),
-		Type:             req.GetType(),
-		Vendor:           req.GetVendor(),
-		ConfirmNumber:    req.GetConfirmNumber(),
-		ReservedAt:       req.GetReservedAt(),
-		Cost:             req.GetCost(),
-		AttachmentS3Key:  req.GetAttachmentS3Key(),
-		Notes:            req.GetNotes(),
-		Audit:            &journeyv1.AuditTimestamps{CreatedAt: now, UpdatedAt: now},
+		Id:              uuid.NewString(),
+		TripId:          req.GetTripId(),
+		Type:            req.GetType(),
+		Vendor:          req.GetVendor(),
+		ConfirmNumber:   req.GetConfirmNumber(),
+		ReservedAt:      req.GetReservedAt(),
+		Cost:            req.GetCost(),
+		AttachmentS3Key: req.GetAttachmentS3Key(),
+		Notes:           req.GetNotes(),
+		Audit:           &journeyv1.AuditTimestamps{CreatedAt: now, UpdatedAt: now},
 	}
 	return v, s.repo.Save(ctx, v)
 }

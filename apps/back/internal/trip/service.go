@@ -123,17 +123,17 @@ func NewService(repo Repository) *Service {
 func (s *Service) Create(ctx context.Context, ownerID string, req *journeyv1.CreateTripRequest) (*journeyv1.Trip, error) {
 	now := timestamppb.New(s.now().UTC())
 	t := &journeyv1.Trip{
-		Id:            uuid.NewString(),
-		OwnerId:       ownerID,
-		Title:         req.GetTitle(),
-		Description:   req.GetDescription(),
-		StartDate:     req.GetStartDate(),
-		EndDate:       req.GetEndDate(),
-		Status:        journeyv1.TripStatus_TRIP_STATUS_PLANNING,
-		Destination:   req.GetDestination(),
-		CountryCode:   req.GetCountryCode(),
-		TotalBudget:   req.GetTotalBudget(),
-		Audit:         &journeyv1.AuditTimestamps{CreatedAt: now, UpdatedAt: now},
+		Id:          uuid.NewString(),
+		OwnerId:     ownerID,
+		Title:       req.GetTitle(),
+		Description: req.GetDescription(),
+		StartDate:   req.GetStartDate(),
+		EndDate:     req.GetEndDate(),
+		Status:      journeyv1.TripStatus_TRIP_STATUS_PLANNING,
+		Destination: req.GetDestination(),
+		CountryCode: req.GetCountryCode(),
+		TotalBudget: req.GetTotalBudget(),
+		Audit:       &journeyv1.AuditTimestamps{CreatedAt: now, UpdatedAt: now},
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, err
