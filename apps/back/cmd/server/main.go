@@ -6,6 +6,10 @@ import (
 	"net"
 	"os"
 
+	"github.com/seonNoh/seonology-journey/apps/back/internal/accommodation"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/day"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/meal"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/schedule"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/server"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/trip"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
@@ -25,8 +29,21 @@ func main() {
 		log.Fatalf("listen: %v", err)
 	}
 
-	tripSvc := trip.NewService(trip.NewMemoryRepo())
-	journey := server.NewJourneyServer(tripSvc)
+	scheduleRepo := schedule.NewMemoryRepo()
+	mealRepo := meal.NewMemoryRepo()
+	accomRepo := accommodation.NewMemoryRepo()
+
+	deps := server.Deps{
+		Trip:          trip.NewService(trip.NewMemoryRepo()),
+		Day:           day.NewService(day.NewMemoryRepo()),
+		Schedule:      schedule.NewService(scheduleRepo),
+		Meal:          meal.NewService(mealRepo),
+		Accommodation: accommodation.NewService(accomRepo),
+		ScheduleRepo:  scheduleRepo,
+		MealRepo:      mealRepo,
+		AccommRepo:    accomRepo,
+	}
+	journey := server.NewJourneyServer(deps)
 
 	srv := grpc.NewServer()
 	journeyv1.RegisterJourneyServiceServer(srv, journey)
