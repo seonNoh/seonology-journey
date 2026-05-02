@@ -23,7 +23,9 @@ spec:
         app.kubernetes.io/part-of: seonology-journey
     spec:
       securityContext:
-        runAsNonRoot: false
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
         seccompProfile:
           type: RuntimeDefault
       containers:
