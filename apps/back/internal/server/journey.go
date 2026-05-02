@@ -8,7 +8,10 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/back/internal/accommodation"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/day"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/meal"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/media"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/record"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/schedule"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/social"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/trip"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
 	"google.golang.org/grpc/codes"
@@ -26,6 +29,26 @@ type Deps struct {
 	ScheduleRepo  *schedule.MemoryRepo
 	MealRepo      *meal.MemoryRepo
 	AccommRepo    *accommodation.MemoryRepo
+
+	Expense     *record.ExpenseService
+	Note        *record.NoteService
+	Checklist   *record.ChecklistService
+	Reservation *record.ReservationService
+	ExpenseRepo     *record.ExpenseRepo
+	NoteRepo        *record.NoteRepo
+	ChecklistRepo   *record.ChecklistRepo
+	ReservationRepo *record.ReservationRepo
+
+	Companion *social.CompanionService
+	Tag       *social.TagService
+	Template  *social.TemplateService
+	Favorite  *social.FavoriteService
+	Share     *social.ShareService
+	CompanionRepo *social.CompanionRepo
+	TagRepo       *social.TagRepo
+
+	Media     *media.Service
+	MediaRepo media.Repository
 }
 
 // JourneyServer - JourneyService 구현.
@@ -60,7 +83,10 @@ func mapErr(err error) error {
 		errors.Is(err, day.ErrNotFound),
 		errors.Is(err, schedule.ErrNotFound),
 		errors.Is(err, meal.ErrNotFound),
-		errors.Is(err, accommodation.ErrNotFound):
+		errors.Is(err, accommodation.ErrNotFound),
+		errors.Is(err, record.ErrNotFound),
+		errors.Is(err, social.ErrNotFound),
+		errors.Is(err, media.ErrNotFound):
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, trip.ErrForbidden):
 		return status.Error(codes.PermissionDenied, err.Error())
@@ -180,6 +206,27 @@ func (s *JourneyServer) DeleteTrip(ctx context.Context, req *journeyv1.DeleteTri
 		_ = s.d.AccommRepo.Delete(ctx, dd.GetId())
 	}
 	_ = s.d.Day.DeleteByTrip(ctx, req.GetTripId())
+	if s.d.ExpenseRepo != nil {
+		_ = s.d.ExpenseRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
+	if s.d.NoteRepo != nil {
+		_ = s.d.NoteRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
+	if s.d.ChecklistRepo != nil {
+		_ = s.d.ChecklistRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
+	if s.d.ReservationRepo != nil {
+		_ = s.d.ReservationRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
+	if s.d.CompanionRepo != nil {
+		_ = s.d.CompanionRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
+	if s.d.TagRepo != nil {
+		_ = s.d.TagRepo.DetachAllFromTrip(ctx, req.GetTripId())
+	}
+	if s.d.MediaRepo != nil {
+		_ = s.d.MediaRepo.DeleteByTrip(ctx, req.GetTripId())
+	}
 	return &journeyv1.DeleteTripResponse{}, nil
 }
 
