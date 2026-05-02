@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "journey/v1/trip.proto";
+import "journey/v1/itinerary.proto";
+import "journey/v1/media.proto";
+import "journey/v1/record.proto";
+import "journey/v1/social.proto";
+import "journey/v1/external.proto";
+import "journey/v1/realtime.proto";
+
+// JourneyService - apps/back gRPC 서비스
+// apps/api 는 이 서비스만 클라이언트로 호출.
+service JourneyService {
+  // Trip
+  rpc CreateTrip(CreateTripRequest) returns (CreateTripResponse);
+  rpc GetTrip(GetTripRequest) returns (GetTripResponse);
+  rpc ListTrips(ListTripsRequest) returns (ListTripsResponse);
+  rpc UpdateTrip(UpdateTripRequest) returns (UpdateTripResponse);
+  rpc DeleteTrip(DeleteTripRequest) returns (DeleteTripResponse);
+
+  // Day
+  rpc ListDays(ListDaysRequest) returns (ListDaysResponse);
+  rpc UpdateDay(UpdateDayRequest) returns (UpdateDayResponse);
+
+  // Schedule
+  rpc CreateSchedule(CreateScheduleRequest) returns (CreateScheduleResponse);
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (UpdateScheduleResponse);
+  rpc DeleteSchedule(DeleteScheduleRequest) returns (DeleteScheduleResponse);
+  rpc ReorderSchedules(ReorderSchedulesRequest) returns (ReorderSchedulesResponse);
+
+  // Meal
+  rpc UpsertMeal(UpsertMealRequest) returns (UpsertMealResponse);
+  rpc ListMeals(ListMealsRequest) returns (ListMealsResponse);
+  rpc DeleteMeal(DeleteMealRequest) returns (DeleteMealResponse);
+
+  // Accommodation
+  rpc UpsertAccommodation(UpsertAccommodationRequest) returns (UpsertAccommodationResponse);
+  rpc GetAccommodation(GetAccommodationRequest) returns (GetAccommodationResponse);
+  rpc DeleteAccommodation(DeleteAccommodationRequest) returns (DeleteAccommodationResponse);
+
+  // Media
+  rpc GetUploadUrl(GetUploadUrlRequest) returns (GetUploadUrlResponse);
+  rpc ConfirmUpload(ConfirmUploadRequest) returns (ConfirmUploadResponse);
+  rpc ListMedia(ListMediaRequest) returns (ListMediaResponse);
+  rpc DeleteMedia(DeleteMediaRequest) returns (DeleteMediaResponse);
+  rpc GetMediaUrl(GetMediaUrlRequest) returns (GetMediaUrlResponse);
+
+  // Expense
+  rpc CreateExpense(CreateExpenseRequest) returns (CreateExpenseResponse);
+  rpc ListExpenses(ListExpensesRequest) returns (ListExpensesResponse);
+  rpc UpdateExpense(UpdateExpenseRequest) returns (UpdateExpenseResponse);
+  rpc DeleteExpense(DeleteExpenseRequest) returns (DeleteExpenseResponse);
+  rpc GetExpenseSummary(GetExpenseSummaryRequest) returns (GetExpenseSummaryResponse);
+
+  // Note
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse);
+  rpc UpdateNote(UpdateNoteRequest) returns (UpdateNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+
+  // Checklist
+  rpc CreateChecklistItem(CreateChecklistItemRequest) returns (CreateChecklistItemResponse);
+  rpc ListChecklistItems(ListChecklistItemsRequest) returns (ListChecklistItemsResponse);
+  rpc UpdateChecklistItem(UpdateChecklistItemRequest) returns (UpdateChecklistItemResponse);
+  rpc DeleteChecklistItem(DeleteChecklistItemRequest) returns (DeleteChecklistItemResponse);
+
+  // Reservation
+  rpc CreateReservation(CreateReservationRequest) returns (CreateReservationResponse);
+  rpc ListReservations(ListReservationsRequest) returns (ListReservationsResponse);
+  rpc UpdateReservation(UpdateReservationRequest) returns (UpdateReservationResponse);
+  rpc DeleteReservation(DeleteReservationRequest) returns (DeleteReservationResponse);
+
+  // Companion / Tag / Template / Favorite / Share
+  rpc AddCompanion(AddCompanionRequest) returns (AddCompanionResponse);
+  rpc ListCompanions(ListCompanionsRequest) returns (ListCompanionsResponse);
+  rpc UpdateCompanionRole(UpdateCompanionRoleRequest) returns (UpdateCompanionRoleResponse);
+  rpc RemoveCompanion(RemoveCompanionRequest) returns (RemoveCompanionResponse);
+
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse);
+  rpc ListTags(ListTagsRequest) returns (ListTagsResponse);
+  rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse);
+  rpc AttachTag(AttachTagRequest) returns (AttachTagResponse);
+  rpc DetachTag(DetachTagRequest) returns (DetachTagResponse);
+  rpc ListTripTags(ListTripTagsRequest) returns (ListTripTagsResponse);
+
+  rpc SaveTripAsTemplate(SaveTripAsTemplateRequest) returns (SaveTripAsTemplateResponse);
+  rpc CreateTripFromTemplate(CreateTripFromTemplateRequest) returns (CreateTripFromTemplateResponse);
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse);
+  rpc DeleteTemplate(DeleteTemplateRequest) returns (DeleteTemplateResponse);
+
+  rpc AddFavoritePlace(AddFavoritePlaceRequest) returns (AddFavoritePlaceResponse);
+  rpc ListFavoritePlaces(ListFavoritePlacesRequest) returns (ListFavoritePlacesResponse);
+  rpc RemoveFavoritePlace(RemoveFavoritePlaceRequest) returns (RemoveFavoritePlaceResponse);
+
+  rpc CreateShare(CreateShareRequest) returns (CreateShareResponse);
+  rpc GetShare(GetShareRequest) returns (GetShareResponse);
+  rpc RevokeShare(RevokeShareRequest) returns (RevokeShareResponse);
+
+  // Statistics
+  rpc GetTripStatistics(GetTripStatisticsRequest) returns (GetTripStatisticsResponse);
+  rpc GetYearlyStatistics(GetYearlyStatisticsRequest) returns (GetYearlyStatisticsResponse);
+
+  // External
+  rpc Geocode(GeocodeRequest) returns (GeocodeResponse);
+  rpc ReverseGeocode(ReverseGeocodeRequest) returns (ReverseGeocodeResponse);
+  rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse);
+  rpc GetWeatherForecast(GetWeatherForecastRequest) returns (GetWeatherForecastResponse);
+
+  // Realtime - api 가 mutation 후 hub 로 publish
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+}

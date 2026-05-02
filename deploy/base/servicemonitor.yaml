@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: seonology-journey
+  namespace: seonology-journey
+  labels:
+    release: kube-prometheus-stack
+spec:
+  namespaceSelector:
+    matchNames:
+      - seonology-journey
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: seonology-journey
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics

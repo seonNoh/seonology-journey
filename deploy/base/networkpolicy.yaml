@@ -1,0 +1,166 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: seonology-journey
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: seonology-journey
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-allow-traefik
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-web
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-allow-traefik
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-to-back
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-api
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: seonology-journey-back
+      ports:
+        - protocol: TCP
+          port: 9090
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: seonology-common
+      ports:
+        - protocol: TCP
+          port: 9090
+    # external (Keycloak JWKS, etc.) - allow all egress to internet
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: back-allow-api
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-back
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: seonology-journey-api
+      ports:
+        - protocol: TCP
+          port: 9090
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9091
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: back-egress
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-back
+  policyTypes: [Egress]
+  egress:
+    # seonology-common (auth/member gRPC)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: seonology-common
+      ports:
+        - protocol: TCP
+          port: 9090
+    # Vault (kube-system 또는 vault namespace - 운영 환경에 맞게 조정)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8200
+    # external AWS / Google APIs
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443

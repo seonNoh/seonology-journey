@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "journey/v1/common.proto";
+
+// Schedule - 일정 항목
+message Schedule {
+  string id = 1;
+  string day_id = 2;
+  int32 order = 3;
+  string start_time = 4; // HH:mm
+  string end_time = 5;   // HH:mm
+  string title = 6;
+  string region = 7;
+  ScheduleCategory category = 8;
+  TransportType transport = 9;
+  string transport_detail = 10;
+  Money cost = 11;
+  string place_name = 12;
+  GeoPoint location = 13;
+  string notes = 14;
+  bool is_completed = 15;
+  AuditTimestamps audit = 16;
+}
+
+// Meal - 식사
+message Meal {
+  string day_id = 1;
+  MealType meal_type = 2;
+  MealSource source = 3;
+  string restaurant_name = 4;
+  string menu = 5;
+  Money cost = 6;
+  int32 rating = 7; // 1-5
+  string review = 8;
+  GeoPoint location = 9;
+  AuditTimestamps audit = 10;
+}
+
+// Accommodation - 숙박 (Day당 1)
+message Accommodation {
+  string day_id = 1;
+  string name = 2;
+  string check_in_time = 3;
+  string check_out_time = 4;
+  Money cost = 5;
+  string amenities = 6;
+  string address = 7;
+  GeoPoint location = 8;
+  string reservation_id = 9;
+  AuditTimestamps audit = 10;
+}
+
+// === Schedule CRUD ===
+
+message CreateScheduleRequest {
+  string day_id = 1;
+  string start_time = 2;
+  string end_time = 3;
+  string title = 4;
+  string region = 5;
+  ScheduleCategory category = 6;
+  TransportType transport = 7;
+  string transport_detail = 8;
+  Money cost = 9;
+  string place_name = 10;
+  GeoPoint location = 11;
+  string notes = 12;
+}
+message CreateScheduleResponse { Schedule schedule = 1; }
+
+message ListSchedulesRequest { string day_id = 1; }
+message ListSchedulesResponse { repeated Schedule schedules = 1; }
+
+message UpdateScheduleRequest {
+  string schedule_id = 1;
+  string start_time = 2;
+  string end_time = 3;
+  string title = 4;
+  string region = 5;
+  ScheduleCategory category = 6;
+  TransportType transport = 7;
+  string transport_detail = 8;
+  Money cost = 9;
+  string place_name = 10;
+  GeoPoint location = 11;
+  string notes = 12;
+  bool is_completed = 13;
+}
+message UpdateScheduleResponse { Schedule schedule = 1; }
+
+message DeleteScheduleRequest { string schedule_id = 1; }
+message DeleteScheduleResponse {}
+
+message ReorderSchedulesRequest {
+  string day_id = 1;
+  repeated string schedule_ids_in_order = 2;
+}
+message ReorderSchedulesResponse { repeated Schedule schedules = 1; }
+
+// === Meal CRUD ===
+
+message UpsertMealRequest {
+  string day_id = 1;
+  MealType meal_type = 2;
+  MealSource source = 3;
+  string restaurant_name = 4;
+  string menu = 5;
+  Money cost = 6;
+  int32 rating = 7;
+  string review = 8;
+  GeoPoint location = 9;
+}
+message UpsertMealResponse { Meal meal = 1; }
+
+message ListMealsRequest { string day_id = 1; }
+message ListMealsResponse { repeated Meal meals = 1; }
+
+message DeleteMealRequest {
+  string day_id = 1;
+  MealType meal_type = 2;
+}
+message DeleteMealResponse {}
+
+// === Accommodation Upsert/Delete ===
+
+message UpsertAccommodationRequest {
+  string day_id = 1;
+  string name = 2;
+  string check_in_time = 3;
+  string check_out_time = 4;
+  Money cost = 5;
+  string amenities = 6;
+  string address = 7;
+  GeoPoint location = 8;
+  string reservation_id = 9;
+}
+message UpsertAccommodationResponse { Accommodation accommodation = 1; }
+
+message GetAccommodationRequest { string day_id = 1; }
+message GetAccommodationResponse { Accommodation accommodation = 1; }
+
+message DeleteAccommodationRequest { string day_id = 1; }
+message DeleteAccommodationResponse {}

@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "google/protobuf/timestamp.proto";
+import "journey/v1/common.proto";
+
+// Media - 사진/영상 메타
+message Media {
+  string id = 1;
+  string trip_id = 2;
+  string day_id = 3;       // optional
+  string schedule_id = 4;  // optional
+  string s3_key = 5;
+  string thumbnail_s3_key = 6;
+  string mime_type = 7;
+  int64 size = 8;
+  google.protobuf.Timestamp taken_at = 9;
+  GeoPoint location = 10;
+  string caption = 11;
+  AuditTimestamps audit = 12;
+}
+
+// === Presigned upload flow ===
+
+message GetUploadUrlRequest {
+  string trip_id = 1;
+  string filename = 2;
+  string mime_type = 3;
+  int64 size = 4;
+}
+message GetUploadUrlResponse {
+  string upload_url = 1;     // presigned PUT URL
+  string s3_key = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  string media_id = 4;       // pre-allocated id
+}
+
+message ConfirmUploadRequest {
+  string media_id = 1;
+  string trip_id = 2;
+  string s3_key = 3;
+  string day_id = 4;
+  string schedule_id = 5;
+  string caption = 6;
+}
+message ConfirmUploadResponse { Media media = 1; }
+
+message ListMediaRequest {
+  string trip_id = 1;
+  string day_id = 2;
+  PageRequest page = 3;
+}
+message ListMediaResponse {
+  repeated Media items = 1;
+  PageInfo page = 2;
+}
+
+message DeleteMediaRequest { string media_id = 1; }
+message DeleteMediaResponse {}
+
+message GetMediaUrlRequest {
+  string media_id = 1;
+  bool thumbnail = 2;
+}
+message GetMediaUrlResponse {
+  string url = 1;
+  google.protobuf.Timestamp expires_at = 2;
+}

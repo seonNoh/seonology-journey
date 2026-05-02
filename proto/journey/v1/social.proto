@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "google/protobuf/timestamp.proto";
+import "journey/v1/common.proto";
+
+// Companion - 동행자
+message Companion {
+  string trip_id = 1;
+  string member_id = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+  CompanionRole role = 5;
+  google.protobuf.Timestamp invited_at = 6;
+}
+
+message AddCompanionRequest {
+  string trip_id = 1;
+  string member_id = 2;
+  CompanionRole role = 3;
+}
+message AddCompanionResponse { Companion companion = 1; }
+message ListCompanionsRequest { string trip_id = 1; }
+message ListCompanionsResponse { repeated Companion companions = 1; }
+message UpdateCompanionRoleRequest {
+  string trip_id = 1;
+  string member_id = 2;
+  CompanionRole role = 3;
+}
+message UpdateCompanionRoleResponse { Companion companion = 1; }
+message RemoveCompanionRequest {
+  string trip_id = 1;
+  string member_id = 2;
+}
+message RemoveCompanionResponse {}
+
+// Tag
+message Tag {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string color = 4; // hex
+}
+message CreateTagRequest {
+  string name = 1;
+  string color = 2;
+}
+message CreateTagResponse { Tag tag = 1; }
+message ListTagsRequest {}
+message ListTagsResponse { repeated Tag tags = 1; }
+message DeleteTagRequest { string tag_id = 1; }
+message DeleteTagResponse {}
+message AttachTagRequest {
+  string trip_id = 1;
+  string tag_id = 2;
+}
+message AttachTagResponse {}
+message DetachTagRequest {
+  string trip_id = 1;
+  string tag_id = 2;
+}
+message DetachTagResponse {}
+message ListTripTagsRequest { string trip_id = 1; }
+message ListTripTagsResponse { repeated Tag tags = 1; }
+
+// Template - 여행 템플릿
+message Template {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  string source_trip_id = 4;
+  AuditTimestamps audit = 5;
+}
+message SaveTripAsTemplateRequest {
+  string trip_id = 1;
+  string name = 2;
+}
+message SaveTripAsTemplateResponse { Template template = 1; }
+message CreateTripFromTemplateRequest {
+  string template_id = 1;
+  string title = 2;
+  string start_date = 3;
+}
+message CreateTripFromTemplateResponse { string trip_id = 1; }
+message ListTemplatesRequest {}
+message ListTemplatesResponse { repeated Template templates = 1; }
+message DeleteTemplateRequest { string template_id = 1; }
+message DeleteTemplateResponse {}
+
+// FavoritePlace
+message FavoritePlace {
+  string id = 1;
+  string user_id = 2;
+  string name = 3;
+  GeoPoint location = 4;
+  string google_place_id = 5;
+  string memo = 6;
+  AuditTimestamps audit = 7;
+}
+message AddFavoritePlaceRequest {
+  string name = 1;
+  GeoPoint location = 2;
+  string google_place_id = 3;
+  string memo = 4;
+}
+message AddFavoritePlaceResponse { FavoritePlace place = 1; }
+message ListFavoritePlacesRequest {}
+message ListFavoritePlacesResponse { repeated FavoritePlace places = 1; }
+message RemoveFavoritePlaceRequest { string place_id = 1; }
+message RemoveFavoritePlaceResponse {}
+
+// Share
+message Share {
+  string code = 1;
+  string trip_id = 2;
+  CompanionRole permission = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  AuditTimestamps audit = 5;
+}
+message CreateShareRequest {
+  string trip_id = 1;
+  CompanionRole permission = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+message CreateShareResponse { Share share = 1; }
+message GetShareRequest { string code = 1; }
+message GetShareResponse {
+  Share share = 1;
+}
+message RevokeShareRequest { string code = 1; }
+message RevokeShareResponse {}

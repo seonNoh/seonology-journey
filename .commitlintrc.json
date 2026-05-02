@@ -1,0 +1,27 @@
+{
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "scope-enum": [
+      2,
+      "always",
+      [
+        "back",
+        "api",
+        "web",
+        "android",
+        "proto",
+        "deploy",
+        "scripts",
+        "docs",
+        "ci",
+        "chore",
+        "release",
+        "deps"
+      ]
+    ],
+    "scope-empty": [2, "never"],
+    "subject-case": [0],
+    "header-max-length": [2, "always", 100],
+    "body-max-line-length": [0]
+  }
+}

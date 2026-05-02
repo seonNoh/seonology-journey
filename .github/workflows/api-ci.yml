@@ -1,0 +1,81 @@
+name: api-ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'proto/**'
+      - '.github/workflows/api-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'proto/**'
+      - '.github/workflows/api-ci.yml'
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/seonology-journey-api
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: apps/api/go.sum
+      - run: go vet ./...
+      - run: go test -race -coverprofile=coverage.out ./...
+      - run: go build ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+          cache-dependency-path: apps/api/go.sum
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+          working-directory: apps/api
+
+  docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+            type=semver,pattern={{version}},prefix=api-v
+      - uses: docker/build-push-action@v6
+        with:
+          context: apps/api
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api

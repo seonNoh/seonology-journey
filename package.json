@@ -1,0 +1,30 @@
+{
+  "name": "seonology-journey",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Seonology Journey monorepo (web + api + back + android)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.18.0",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "lint:commit": "commitlint --edit",
+    "lint:staged": "lint-staged",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\""
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
+}

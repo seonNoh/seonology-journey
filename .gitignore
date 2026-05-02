@@ -1,0 +1,105 @@
+# Personal / private (per workspace push rule)
+docs/
+manual/
+source/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+.kiro/
+.claude/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.keystore
+secrets.yaml
+**/secrets.yaml
+!**/secrets.yaml.example
+
+# Logs
+*.log
+logs/
+
+# Node
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+.cache/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Vite
+**/.vite/
+
+# Go
+**/bin/
+**/*.test
+**/*.out
+**/vendor/
+**/cover.out
+**/coverage.out
+
+# Proto generated
+proto/gen/
+
+# Android
+**/.gradle/
+**/build/
+**/local.properties
+**/captures/
+**/*.iml
+**/*.hprof
+**/*.apk
+**/*.aab
+**/release/
+**/debug/
+**/.cxx/
+**/keystore.properties
+**/google-services.json
+**/agconnect-services.json
+
+# Kotlin
+**/.kotlin/
+
+# Python (if any tooling)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Terraform / infra state (we use raw scripts not tf, but just in case)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Misc
+tmp/
+.tmp/

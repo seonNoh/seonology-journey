@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "google/protobuf/timestamp.proto";
+
+// Money - 통화와 금액 (소수 표현은 정수 + scale)
+message Money {
+  string currency = 1; // ISO 4217 (KRW, JPY, USD ...)
+  int64 amount = 2;    // 최소 단위 (예: KRW 원, JPY 엔)
+}
+
+// GeoPoint - 위경도
+message GeoPoint {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// PageRequest - 페이지네이션 요청
+message PageRequest {
+  string cursor = 1;
+  int32 limit = 2; // default 20, max 100
+}
+
+// PageInfo - 페이지네이션 응답 메타
+message PageInfo {
+  string next_cursor = 1;
+  bool has_more = 2;
+}
+
+// AuditTimestamps - 생성/수정 시각
+message AuditTimestamps {
+  google.protobuf.Timestamp created_at = 1;
+  google.protobuf.Timestamp updated_at = 2;
+}
+
+// TripStatus
+enum TripStatus {
+  TRIP_STATUS_UNSPECIFIED = 0;
+  TRIP_STATUS_PLANNING = 1;
+  TRIP_STATUS_ONGOING = 2;
+  TRIP_STATUS_COMPLETED = 3;
+}
+
+// ScheduleCategory
+enum ScheduleCategory {
+  SCHEDULE_CATEGORY_UNSPECIFIED = 0;
+  SCHEDULE_CATEGORY_TRANSPORT = 1;
+  SCHEDULE_CATEGORY_MEAL = 2;
+  SCHEDULE_CATEGORY_SIGHTSEEING = 3;
+  SCHEDULE_CATEGORY_ACTIVITY = 4;
+  SCHEDULE_CATEGORY_REST = 5;
+  SCHEDULE_CATEGORY_SHOPPING = 6;
+  SCHEDULE_CATEGORY_ACCOMMODATION = 7;
+}
+
+// TransportType
+enum TransportType {
+  TRANSPORT_TYPE_UNSPECIFIED = 0;
+  TRANSPORT_TYPE_WALK = 1;
+  TRANSPORT_TYPE_BUS = 2;
+  TRANSPORT_TYPE_TRAIN = 3;
+  TRANSPORT_TYPE_SUBWAY = 4;
+  TRANSPORT_TYPE_TAXI = 5;
+  TRANSPORT_TYPE_FLIGHT = 6;
+  TRANSPORT_TYPE_CAR = 7;
+  TRANSPORT_TYPE_FERRY = 8;
+  TRANSPORT_TYPE_OTHER = 99;
+}
+
+// MealType
+enum MealType {
+  MEAL_TYPE_UNSPECIFIED = 0;
+  MEAL_TYPE_BREAKFAST = 1;
+  MEAL_TYPE_LUNCH = 2;
+  MEAL_TYPE_DINNER = 3;
+}
+
+// MealSource - 식사 종류 (PDF 의 호텔식/현지식/X 패턴)
+enum MealSource {
+  MEAL_SOURCE_UNSPECIFIED = 0;
+  MEAL_SOURCE_HOTEL = 1;
+  MEAL_SOURCE_LOCAL = 2;
+  MEAL_SOURCE_CONVENIENCE = 3;
+  MEAL_SOURCE_SKIP = 4;
+}
+
+// CompanionRole
+enum CompanionRole {
+  COMPANION_ROLE_UNSPECIFIED = 0;
+  COMPANION_ROLE_OWNER = 1;
+  COMPANION_ROLE_EDITOR = 2;
+  COMPANION_ROLE_VIEWER = 3;
+}
+
+// ChecklistCategory
+enum ChecklistCategory {
+  CHECKLIST_CATEGORY_UNSPECIFIED = 0;
+  CHECKLIST_CATEGORY_PACKING = 1;
+  CHECKLIST_CATEGORY_TODO = 2;
+  CHECKLIST_CATEGORY_BOOKING = 3;
+}
+
+// ReservationType
+enum ReservationType {
+  RESERVATION_TYPE_UNSPECIFIED = 0;
+  RESERVATION_TYPE_FLIGHT = 1;
+  RESERVATION_TYPE_HOTEL = 2;
+  RESERVATION_TYPE_ACTIVITY = 3;
+  RESERVATION_TYPE_RESTAURANT = 4;
+  RESERVATION_TYPE_TRANSPORT = 5;
+}
+
+// ExpenseCategory
+enum ExpenseCategory {
+  EXPENSE_CATEGORY_UNSPECIFIED = 0;
+  EXPENSE_CATEGORY_TRANSPORT = 1;
+  EXPENSE_CATEGORY_FOOD = 2;
+  EXPENSE_CATEGORY_LODGING = 3;
+  EXPENSE_CATEGORY_ACTIVITY = 4;
+  EXPENSE_CATEGORY_SHOPPING = 5;
+  EXPENSE_CATEGORY_OTHER = 99;
+}
+
+// PaymentMethod
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_CASH = 1;
+  PAYMENT_METHOD_CARD = 2;
+  PAYMENT_METHOD_TRANSFER = 3;
+  PAYMENT_METHOD_OTHER = 99;
+}

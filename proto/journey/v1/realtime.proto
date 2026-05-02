@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "google/protobuf/timestamp.proto";
+
+// RealtimeEvent - WebSocket Hub 가 브로드캐스트하는 이벤트
+message RealtimeEvent {
+  string event_id = 1;
+  string trip_id = 2;
+  string actor_member_id = 3;
+  google.protobuf.Timestamp occurred_at = 4;
+
+  oneof payload {
+    TripUpdated trip_updated = 10;
+    DayUpdated day_updated = 11;
+    ScheduleCreated schedule_created = 12;
+    ScheduleUpdated schedule_updated = 13;
+    ScheduleDeleted schedule_deleted = 14;
+    SchedulesReordered schedules_reordered = 15;
+    MealUpserted meal_upserted = 16;
+    AccommodationUpserted accommodation_upserted = 17;
+    ExpenseChanged expense_changed = 18;
+    NoteChanged note_changed = 19;
+    ChecklistChanged checklist_changed = 20;
+    MediaAdded media_added = 21;
+    PresenceChanged presence_changed = 22;
+  }
+}
+
+message TripUpdated { string trip_id = 1; }
+message DayUpdated { string day_id = 1; }
+message ScheduleCreated { string schedule_id = 1; string day_id = 2; }
+message ScheduleUpdated { string schedule_id = 1; }
+message ScheduleDeleted { string schedule_id = 1; string day_id = 2; }
+message SchedulesReordered {
+  string day_id = 1;
+  repeated string schedule_ids_in_order = 2;
+}
+message MealUpserted { string day_id = 1; int32 meal_type = 2; }
+message AccommodationUpserted { string day_id = 1; }
+message ExpenseChanged { string expense_id = 1; string action = 2; }
+message NoteChanged { string note_id = 1; string action = 2; }
+message ChecklistChanged { string item_id = 1; string action = 2; }
+message MediaAdded { string media_id = 1; }
+message PresenceChanged {
+  repeated string online_member_ids = 1;
+}
+
+// Internal pub/sub envelope used by api → hub
+message PublishEventRequest { RealtimeEvent event = 1; }
+message PublishEventResponse {}

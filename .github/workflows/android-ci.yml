@@ -1,0 +1,55 @@
+name: android-ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['android-v*']
+    paths:
+      - 'apps/android/**'
+      - '.github/workflows/android-ci.yml'
+  pull_request:
+    paths:
+      - 'apps/android/**'
+      - '.github/workflows/android-ci.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon ktlintCheck detekt
+        continue-on-error: true
+      - run: ./gradlew --no-daemon test
+      - run: ./gradlew --no-daemon assembleDebug
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/android-v')
+    runs-on: ubuntu-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon assembleRelease bundleRelease
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/android/app/build/outputs/apk/release/*.apk
+            apps/android/app/build/outputs/bundle/release/*.aab

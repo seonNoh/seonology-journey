@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "journey/v1/common.proto";
+
+// Trip - 여행 전체
+message Trip {
+  string id = 1;
+  string owner_id = 2;
+  string title = 3;
+  string description = 4;
+  string start_date = 5; // YYYY-MM-DD
+  string end_date = 6;   // YYYY-MM-DD
+  TripStatus status = 7;
+  string cover_image_url = 8;
+  Money total_budget = 9;
+  string destination = 10;
+  string country_code = 11; // ISO 3166-1 alpha-2 (JP, KR, ...)
+  AuditTimestamps audit = 12;
+}
+
+// Day - 일차
+message Day {
+  string id = 1;
+  string trip_id = 2;
+  int32 day_number = 3;
+  string date = 4;        // YYYY-MM-DD
+  string day_of_week = 5; // 월/화/...
+  string region = 6;
+  string weather = 7;
+  string daily_summary = 8;
+  AuditTimestamps audit = 9;
+}
+
+// === Trip CRUD ===
+
+message CreateTripRequest {
+  string title = 1;
+  string description = 2;
+  string start_date = 3;
+  string end_date = 4;
+  string destination = 5;
+  string country_code = 6;
+  Money total_budget = 7;
+}
+message CreateTripResponse { Trip trip = 1; }
+
+message GetTripRequest { string trip_id = 1; }
+message GetTripResponse { Trip trip = 1; }
+
+message ListTripsRequest {
+  TripStatus status = 1; // unspecified = all
+  PageRequest page = 2;
+}
+message ListTripsResponse {
+  repeated Trip trips = 1;
+  PageInfo page = 2;
+}
+
+message UpdateTripRequest {
+  string trip_id = 1;
+  string title = 2;
+  string description = 3;
+  string start_date = 4;
+  string end_date = 5;
+  TripStatus status = 6;
+  string cover_image_url = 7;
+  Money total_budget = 8;
+  string destination = 9;
+  string country_code = 10;
+}
+message UpdateTripResponse { Trip trip = 1; }
+
+message DeleteTripRequest { string trip_id = 1; }
+message DeleteTripResponse {}
+
+// === Day CRUD ===
+
+message ListDaysRequest { string trip_id = 1; }
+message ListDaysResponse { repeated Day days = 1; }
+
+message UpdateDayRequest {
+  string day_id = 1;
+  string region = 2;
+  string weather = 3;
+  string daily_summary = 4;
+}
+message UpdateDayResponse { Day day = 1; }

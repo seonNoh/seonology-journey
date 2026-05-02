@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package journey.v1;
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
+
+import "google/protobuf/timestamp.proto";
+import "journey/v1/common.proto";
+
+// Expense - 지출
+message Expense {
+  string id = 1;
+  string trip_id = 2;
+  string day_id = 3;
+  ExpenseCategory category = 4;
+  Money amount = 5;
+  PaymentMethod payment_method = 6;
+  string description = 7;
+  google.protobuf.Timestamp spent_at = 8;
+  AuditTimestamps audit = 9;
+}
+
+// Note - 메모
+message Note {
+  string id = 1;
+  string trip_id = 2;
+  string day_id = 3;
+  string content = 4;
+  string mood = 5; // happy/sad/excited/...
+  AuditTimestamps audit = 6;
+}
+
+// Checklist - 체크리스트
+message ChecklistItem {
+  string id = 1;
+  string trip_id = 2;
+  ChecklistCategory category = 3;
+  string item = 4;
+  bool is_checked = 5;
+  AuditTimestamps audit = 6;
+}
+
+// Reservation - 예약
+message Reservation {
+  string id = 1;
+  string trip_id = 2;
+  ReservationType type = 3;
+  string vendor = 4;
+  string confirm_number = 5;
+  google.protobuf.Timestamp reserved_at = 6;
+  Money cost = 7;
+  string attachment_s3_key = 8;
+  string notes = 9;
+  AuditTimestamps audit = 10;
+}
+
+// === Expense ===
+message CreateExpenseRequest {
+  string trip_id = 1;
+  string day_id = 2;
+  ExpenseCategory category = 3;
+  Money amount = 4;
+  PaymentMethod payment_method = 5;
+  string description = 6;
+  google.protobuf.Timestamp spent_at = 7;
+}
+message CreateExpenseResponse { Expense expense = 1; }
+message ListExpensesRequest {
+  string trip_id = 1;
+  PageRequest page = 2;
+}
+message ListExpensesResponse {
+  repeated Expense expenses = 1;
+  PageInfo page = 2;
+}
+message UpdateExpenseRequest {
+  string expense_id = 1;
+  ExpenseCategory category = 2;
+  Money amount = 3;
+  PaymentMethod payment_method = 4;
+  string description = 5;
+  string day_id = 6;
+}
+message UpdateExpenseResponse { Expense expense = 1; }
+message DeleteExpenseRequest { string expense_id = 1; }
+message DeleteExpenseResponse {}
+
+message ExpenseSummary {
+  message ByCategory {
+    ExpenseCategory category = 1;
+    Money total = 2;
+  }
+  message ByDay {
+    string date = 1;
+    Money total = 2;
+  }
+  string trip_id = 1;
+  Money grand_total = 2;
+  repeated ByCategory by_category = 3;
+  repeated ByDay by_day = 4;
+}
+message GetExpenseSummaryRequest { string trip_id = 1; }
+message GetExpenseSummaryResponse { ExpenseSummary summary = 1; }
+
+// === Note ===
+message CreateNoteRequest {
+  string trip_id = 1;
+  string day_id = 2;
+  string content = 3;
+  string mood = 4;
+}
+message CreateNoteResponse { Note note = 1; }
+message ListNotesRequest { string trip_id = 1; }
+message ListNotesResponse { repeated Note notes = 1; }
+message UpdateNoteRequest {
+  string note_id = 1;
+  string content = 2;
+  string mood = 3;
+}
+message UpdateNoteResponse { Note note = 1; }
+message DeleteNoteRequest { string note_id = 1; }
+message DeleteNoteResponse {}
+
+// === Checklist ===
+message CreateChecklistItemRequest {
+  string trip_id = 1;
+  ChecklistCategory category = 2;
+  string item = 3;
+}
+message CreateChecklistItemResponse { ChecklistItem item = 1; }
+message ListChecklistItemsRequest { string trip_id = 1; }
+message ListChecklistItemsResponse { repeated ChecklistItem items = 1; }
+message UpdateChecklistItemRequest {
+  string item_id = 1;
+  ChecklistCategory category = 2;
+  string item = 3;
+  bool is_checked = 4;
+}
+message UpdateChecklistItemResponse { ChecklistItem item = 1; }
+message DeleteChecklistItemRequest { string item_id = 1; }
+message DeleteChecklistItemResponse {}
+
+// === Reservation ===
+message CreateReservationRequest {
+  string trip_id = 1;
+  ReservationType type = 2;
+  string vendor = 3;
+  string confirm_number = 4;
+  google.protobuf.Timestamp reserved_at = 5;
+  Money cost = 6;
+  string attachment_s3_key = 7;
+  string notes = 8;
+}
+message CreateReservationResponse { Reservation reservation = 1; }
+message ListReservationsRequest { string trip_id = 1; }
+message ListReservationsResponse { repeated Reservation reservations = 1; }
+message UpdateReservationRequest {
+  string reservation_id = 1;
+  ReservationType type = 2;
+  string vendor = 3;
+  string confirm_number = 4;
+  google.protobuf.Timestamp reserved_at = 5;
+  Money cost = 6;
+  string attachment_s3_key = 7;
+  string notes = 8;
+}
+message UpdateReservationResponse { Reservation reservation = 1; }
+message DeleteReservationRequest { string reservation_id = 1; }
+message DeleteReservationResponse {}

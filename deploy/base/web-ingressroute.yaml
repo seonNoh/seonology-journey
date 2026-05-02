@@ -1,0 +1,56 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: journey-seonology-com-tls
+  namespace: seonology-journey
+spec:
+  secretName: journey-seonology-com-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - journey.seonology.com
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-to-https
+  namespace: seonology-journey
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: seonology-journey-web-https
+  namespace: seonology-journey
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`journey.seonology.com`)
+      kind: Rule
+      services:
+        - name: seonology-journey-web
+          port: 8080
+  tls:
+    secretName: journey-seonology-com-tls
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: seonology-journey-web-http
+  namespace: seonology-journey
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`journey.seonology.com`)
+      kind: Rule
+      services:
+        - name: seonology-journey-web
+          port: 8080
+      middlewares:
+        - name: redirect-to-https

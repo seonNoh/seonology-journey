@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seonology-journey-web
+  namespace: seonology-journey
+  labels:
+    app.kubernetes.io/name: seonology-journey-web
+    app.kubernetes.io/part-of: seonology-journey
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seonology-journey-web
+        app.kubernetes.io/part-of: seonology-journey
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ghcr.io/seonnoh/seonology-journey-web:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: '50m'
+              memory: '64Mi'
+            limits:
+              cpu: '200m'
+              memory: '256Mi'
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seonology-journey-web
+  namespace: seonology-journey
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: seonology-journey-web
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

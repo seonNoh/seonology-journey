@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: seonology-journey-api
+  namespace: seonology-journey
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seonology-journey-api
+  namespace: seonology-journey
+  labels:
+    app.kubernetes.io/name: seonology-journey-api
+    app.kubernetes.io/part-of: seonology-journey
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seonology-journey-api
+        app.kubernetes.io/part-of: seonology-journey
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'seonology-journey-api'
+        vault.hashicorp.com/agent-inject-secret-keycloak.env: 'secret/data/seonology-journey/keycloak'
+        vault.hashicorp.com/agent-inject-template-keycloak.env: |
+          {{- with secret "secret/data/seonology-journey/keycloak" -}}
+          KEYCLOAK_ISSUER={{ .Data.data.issuer }}
+          KEYCLOAK_AUDIENCE={{ .Data.data.audience }}
+          {{- end }}
+    spec:
+      serviceAccountName: seonology-journey-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/seonnoh/seonology-journey-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: metrics
+              containerPort: 8081
+          env:
+            - name: HTTP_LISTEN_ADDR
+              value: ':8080'
+            - name: METRICS_LISTEN_ADDR
+              value: ':8081'
+            - name: BACK_GRPC_ADDR
+              value: 'seonology-journey-back.seonology-journey.svc.cluster.local:9090'
+            - name: ALLOWED_ORIGINS
+              value: 'https://journey.seonology.com'
+          resources:
+            requests:
+              cpu: '100m'
+              memory: '128Mi'
+            limits:
+              cpu: '500m'
+              memory: '512Mi'
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
