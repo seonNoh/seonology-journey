@@ -29,10 +29,12 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --no-daemon ktlintCheck detekt
+        with:
+          gradle-version: '8.10.2'
+      - run: gradle --no-daemon ktlintCheck detekt
         continue-on-error: true
-      - run: ./gradlew --no-daemon test
-      - run: ./gradlew --no-daemon assembleDebug
+      - run: gradle --no-daemon test
+      - run: gradle --no-daemon assembleDebug
 
   release:
     if: startsWith(github.ref, 'refs/tags/android-v')
@@ -48,7 +50,9 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --no-daemon assembleRelease bundleRelease
+        with:
+          gradle-version: '8.10.2'
+      - run: gradle --no-daemon assembleRelease bundleRelease
       - uses: softprops/action-gh-release@v2
         with:
           files: |

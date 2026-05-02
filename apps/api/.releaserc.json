@@ -1,0 +1,28 @@
+{
+  "branches": ["main"],
+  "tagFormat": "api-v${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "scope": "api", "type": "feat", "release": "minor" },
+          { "scope": "api", "type": "fix", "release": "patch" },
+          { "scope": "api", "type": "perf", "release": "patch" },
+          { "scope": "api", "type": "refactor", "release": "patch" },
+          { "scope": "api", "breaking": true, "release": "major" },
+          { "scope": "!api", "release": false }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      { "preset": "conventionalcommits" }
+    ],
+    [
+      "@semantic-release/github",
+      { "successComment": false, "failTitle": false, "labels": false }
+    ]
+  ]
+}

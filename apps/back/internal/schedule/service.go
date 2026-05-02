@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -95,20 +96,7 @@ func clone(s *journeyv1.Schedule) *journeyv1.Schedule {
 	if s == nil {
 		return nil
 	}
-	cp := *s
-	if s.GetAudit() != nil {
-		ad := *s.Audit
-		cp.Audit = &ad
-	}
-	if s.GetCost() != nil {
-		c := *s.Cost
-		cp.Cost = &c
-	}
-	if s.GetLocation() != nil {
-		l := *s.Location
-		cp.Location = &l
-	}
-	return &cp
+	return proto.Clone(s).(*journeyv1.Schedule)
 }
 
 // Service - Schedule 로직.

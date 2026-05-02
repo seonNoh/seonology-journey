@@ -10,6 +10,7 @@ import (
 	"time"
 
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -89,20 +90,7 @@ func clone(m *journeyv1.Meal) *journeyv1.Meal {
 	if m == nil {
 		return nil
 	}
-	cp := *m
-	if m.GetAudit() != nil {
-		ad := *m.Audit
-		cp.Audit = &ad
-	}
-	if m.GetCost() != nil {
-		c := *m.Cost
-		cp.Cost = &c
-	}
-	if m.GetLocation() != nil {
-		l := *m.Location
-		cp.Location = &l
-	}
-	return &cp
+	return proto.Clone(m).(*journeyv1.Meal)
 }
 
 // Service - Meal 로직.

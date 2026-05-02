@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -96,12 +97,7 @@ func clone(d *journeyv1.Day) *journeyv1.Day {
 	if d == nil {
 		return nil
 	}
-	cp := *d
-	if d.GetAudit() != nil {
-		ad := *d.Audit
-		cp.Audit = &ad
-	}
-	return &cp
+	return proto.Clone(d).(*journeyv1.Day)
 }
 
 // Service - Day 비즈니스 로직.

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -66,20 +67,7 @@ func clone(a *journeyv1.Accommodation) *journeyv1.Accommodation {
 	if a == nil {
 		return nil
 	}
-	cp := *a
-	if a.GetAudit() != nil {
-		ad := *a.Audit
-		cp.Audit = &ad
-	}
-	if a.GetCost() != nil {
-		c := *a.Cost
-		cp.Cost = &c
-	}
-	if a.GetLocation() != nil {
-		l := *a.Location
-		cp.Location = &l
-	}
-	return &cp
+	return proto.Clone(a).(*journeyv1.Accommodation)
 }
 
 // Service - Accommodation 로직.

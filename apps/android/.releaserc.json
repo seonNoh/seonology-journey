@@ -1,0 +1,28 @@
+{
+  "branches": ["main"],
+  "tagFormat": "android-v${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "scope": "android", "type": "feat", "release": "minor" },
+          { "scope": "android", "type": "fix", "release": "patch" },
+          { "scope": "android", "type": "perf", "release": "patch" },
+          { "scope": "android", "type": "refactor", "release": "patch" },
+          { "scope": "android", "breaking": true, "release": "major" },
+          { "scope": "!android", "release": false }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      { "preset": "conventionalcommits" }
+    ],
+    [
+      "@semantic-release/github",
+      { "successComment": false, "failTitle": false, "labels": false }
+    ]
+  ]
+}

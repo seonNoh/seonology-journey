@@ -1,0 +1,28 @@
+{
+  "branches": ["main"],
+  "tagFormat": "back-v${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "scope": "back", "type": "feat", "release": "minor" },
+          { "scope": "back", "type": "fix", "release": "patch" },
+          { "scope": "back", "type": "perf", "release": "patch" },
+          { "scope": "back", "type": "refactor", "release": "patch" },
+          { "scope": "back", "breaking": true, "release": "major" },
+          { "scope": "!back", "release": false }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      { "preset": "conventionalcommits" }
+    ],
+    [
+      "@semantic-release/github",
+      { "successComment": false, "failTitle": false, "labels": false }
+    ]
+  ]
+}

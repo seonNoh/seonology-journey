@@ -1,0 +1,28 @@
+{
+  "branches": ["main"],
+  "tagFormat": "web-v${version}",
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "scope": "web", "type": "feat", "release": "minor" },
+          { "scope": "web", "type": "fix", "release": "patch" },
+          { "scope": "web", "type": "perf", "release": "patch" },
+          { "scope": "web", "type": "refactor", "release": "patch" },
+          { "scope": "web", "breaking": true, "release": "major" },
+          { "scope": "!web", "release": false }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      { "preset": "conventionalcommits" }
+    ],
+    [
+      "@semantic-release/github",
+      { "successComment": false, "failTitle": false, "labels": false }
+    ]
+  ]
+}

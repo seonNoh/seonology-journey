@@ -1,0 +1,83 @@
+name: release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  packages: write
+
+jobs:
+  release:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: back
+            image: ghcr.io/${{ github.repository_owner }}/seonology-journey-back
+            tag: back-v
+          - app: api
+            image: ghcr.io/${{ github.repository_owner }}/seonology-journey-api
+            tag: api-v
+          - app: web
+            image: ghcr.io/${{ github.repository_owner }}/seonology-journey-web
+            tag: web-v
+          - app: android
+            image: ''
+            tag: android-v
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install semantic-release
+        run: |
+          npm init -y >/dev/null
+          npm install --no-save \
+            semantic-release@24 \
+            @semantic-release/commit-analyzer@13 \
+            @semantic-release/release-notes-generator@14 \
+            @semantic-release/github@11 \
+            conventional-changelog-conventionalcommits@8
+      - name: run semantic-release
+        id: semrel
+        working-directory: apps/${{ matrix.app }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          npx --no-install semantic-release \
+            --extends "$GITHUB_WORKSPACE/apps/${{ matrix.app }}/.releaserc.json" \
+            > >(tee /tmp/semrel.log) 2>&1 || true
+          version=$(grep -oE 'next release version is [0-9]+\.[0-9]+\.[0-9]+' /tmp/semrel.log | tail -n1 | awk '{print $NF}')
+          if [ -z "$version" ]; then
+            version=$(grep -oE 'Published release [0-9]+\.[0-9]+\.[0-9]+' /tmp/semrel.log | tail -n1 | awk '{print $NF}')
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [ -n "$version" ]; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "released ${{ matrix.app }} v${version}"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "no release for ${{ matrix.app }}"
+          fi
+
+      - name: tag docker image with semver
+        if: steps.semrel.outputs.released == 'true' && matrix.image != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker buildx imagetools create \
+            --tag ${{ matrix.image }}:${{ steps.semrel.outputs.version }} \
+            ${{ matrix.image }}:latest

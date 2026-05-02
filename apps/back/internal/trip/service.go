@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -104,16 +105,7 @@ func clone(t *journeyv1.Trip) *journeyv1.Trip {
 	if t == nil {
 		return nil
 	}
-	cp := *t
-	if t.GetAudit() != nil {
-		ad := *t.Audit
-		cp.Audit = &ad
-	}
-	if t.GetTotalBudget() != nil {
-		mb := *t.TotalBudget
-		cp.TotalBudget = &mb
-	}
-	return &cp
+	return proto.Clone(t).(*journeyv1.Trip)
 }
 
 // Service - Trip 비즈니스 로직.
