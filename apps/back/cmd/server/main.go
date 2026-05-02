@@ -1,6 +1,4 @@
 // Package main is the entrypoint for the seonology-journey-back gRPC service.
-//
-// 実装は段階的に追加. 現時点ではビルド可能性の確保のみが目的.
 package main
 
 import (
@@ -8,6 +6,9 @@ import (
 	"net"
 	"os"
 
+	"github.com/seonNoh/seonology-journey/apps/back/internal/server"
+	"github.com/seonNoh/seonology-journey/apps/back/internal/trip"
+	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
@@ -23,9 +24,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
+
+	tripSvc := trip.NewService(trip.NewMemoryRepo())
+	journey := server.NewJourneyServer(tripSvc)
+
 	srv := grpc.NewServer()
+	journeyv1.RegisterJourneyServiceServer(srv, journey)
 	healthgrpc.RegisterHealthServer(srv, health.NewServer())
 	reflection.Register(srv)
+
 	log.Printf("seonology-journey-back gRPC listening on %s", addr)
 	if err := srv.Serve(lis); err != nil {
 		log.Fatalf("serve: %v", err)

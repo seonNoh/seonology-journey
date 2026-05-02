@@ -63,8 +63,8 @@ coverage/
 **/cover.out
 **/coverage.out
 
-# Proto generated
-proto/gen/
+# Proto generated (committed)
+# proto/gen/ is committed to keep CI/Docker simple.
 
 # Android
 **/.gradle/
