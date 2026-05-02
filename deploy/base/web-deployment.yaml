@@ -16,6 +16,7 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: seonology-journey-web
+      app.kubernetes.io/part-of: seonology-journey
   template:
     metadata:
       labels:
