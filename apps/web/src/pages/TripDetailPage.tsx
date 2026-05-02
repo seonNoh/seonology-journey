@@ -1,0 +1,66 @@
+import { useParams, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { ArrowLeft, CalendarDays, MapPin } from 'lucide-react'
+import { api } from '../lib/api'
+import type { Day, ListDaysResponse, Trip } from '../lib/types'
+
+export function TripDetailPage() {
+  const { tripId = '' } = useParams()
+  const trip = useQuery({
+    queryKey: ['trip', tripId],
+    queryFn: () => api.get<{ trip: Trip }>(`/trips/${tripId}`),
+    enabled: !!tripId,
+  })
+  const days = useQuery({
+    queryKey: ['days', tripId],
+    queryFn: () => api.get<ListDaysResponse>(`/trips/${tripId}/days`),
+    enabled: !!tripId,
+  })
+  return (
+    <section className="space-y-4">
+      <Link to="/trips" className="inline-flex items-center gap-1 text-sm text-sakura-700">
+        <ArrowLeft className="h-4 w-4" /> 목록으로
+      </Link>
+      {trip.isLoading && <p>불러오는 중…</p>}
+      {trip.error && <p className="text-red-500">{(trip.error as Error).message}</p>}
+      {trip.data && (
+        <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-800">{trip.data.trip.title}</h1>
+          {trip.data.trip.destination && (
+            <p className="mt-1 flex items-center gap-1 text-slate-600">
+              <MapPin className="h-4 w-4" /> {trip.data.trip.destination}
+            </p>
+          )}
+          {trip.data.trip.startDate && (
+            <p className="mt-1 flex items-center gap-1 text-slate-500">
+              <CalendarDays className="h-4 w-4" /> {trip.data.trip.startDate} → {trip.data.trip.endDate}
+            </p>
+          )}
+        </div>
+      )}
+      <h2 className="text-lg font-bold text-slate-800">일정</h2>
+      <ul className="space-y-2">
+        {days.data?.days?.map((d: Day) => (
+          <li key={d.dayId}>
+            <Link
+              to={`/days/${d.dayId}`}
+              className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm hover:shadow"
+            >
+              <div>
+                <span className="text-xs font-bold text-sakura-600">DAY {d.dayNumber}</span>
+                <p className="text-slate-800">{d.dayDate}</p>
+                {d.region && <p className="text-sm text-slate-500">{d.region}</p>}
+              </div>
+              <span className="text-slate-400">→</span>
+            </Link>
+          </li>
+        ))}
+        {days.data?.days?.length === 0 && (
+          <li className="rounded-xl bg-white p-6 text-center text-slate-500 shadow-sm">
+            Day 가 없습니다.
+          </li>
+        )}
+      </ul>
+    </section>
+  )
+}
