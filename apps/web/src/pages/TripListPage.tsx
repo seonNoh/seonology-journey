@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Plus, MapPin, CalendarDays } from 'lucide-react'
 import { api } from '../lib/api'
-import type { ListTripsResponse, Trip } from '../lib/types'
+import type { CreateTripInput, ListTripsResponse, Trip } from '../lib/types'
 import { useAuth } from '../hooks/useAuth'
 
 export function TripListPage() {
@@ -18,7 +18,7 @@ export function TripListPage() {
   })
 
   const createMut = useMutation({
-    mutationFn: (input: Partial<Trip>) => api.post<{ trip: Trip }>('/trips', input),
+    mutationFn: (input: CreateTripInput) => api.post<{ trip: Trip }>('/trips', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trips'] })
       setOpen(false)
@@ -56,9 +56,9 @@ export function TripListPage() {
 
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {data?.trips?.map((t) => (
-          <li key={t.tripId}>
+          <li key={t.id}>
             <Link
-              to={`/trips/${t.tripId}`}
+              to={`/trips/${t.id}`}
               className="block rounded-xl bg-white p-4 shadow-sm hover:shadow transition"
             >
               <h2 className="font-bold text-slate-800">{t.title}</h2>
@@ -82,7 +82,13 @@ export function TripListPage() {
         )}
       </ul>
 
-      {open && <CreateTripModal onClose={() => setOpen(false)} onSubmit={(v) => createMut.mutate(v)} pending={createMut.isPending} />}
+      {open && (
+        <CreateTripModal
+          onClose={() => setOpen(false)}
+          onSubmit={(v) => createMut.mutate(v)}
+          pending={createMut.isPending}
+        />
+      )}
     </section>
   )
 }
@@ -93,15 +99,17 @@ function CreateTripModal({
   pending,
 }: {
   onClose: () => void
-  onSubmit: (v: Partial<Trip>) => void
+  onSubmit: (v: CreateTripInput) => void
   pending: boolean
 }) {
-  const [form, setForm] = useState<Partial<Trip>>({
+  const [form, setForm] = useState<CreateTripInput & { currency: string }>({
     title: '',
+    description: '',
     destination: '',
     startDate: '',
     endDate: '',
-    budgetCurrency: 'JPY',
+    countryCode: '',
+    currency: 'JPY',
   })
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
@@ -111,17 +119,52 @@ function CreateTripModal({
           className="mt-4 space-y-3"
           onSubmit={(e) => {
             e.preventDefault()
-            onSubmit(form)
+            const { currency, ...rest } = form
+            onSubmit({
+              ...rest,
+              totalBudget: currency ? { currency, amount: 0 } : undefined,
+            })
           }}
         >
-          <Field label="제목" required value={form.title ?? ''} onChange={(v) => setForm({ ...form, title: v })} />
-          <Field label="목적지" value={form.destination ?? ''} onChange={(v) => setForm({ ...form, destination: v })} />
+          <Field
+            label="제목"
+            required
+            value={form.title}
+            onChange={(v) => setForm({ ...form, title: v })}
+          />
+          <Field
+            label="목적지"
+            value={form.destination ?? ''}
+            onChange={(v) => setForm({ ...form, destination: v })}
+          />
+          <Field
+            label="국가 코드 (JP/KR/...)"
+            value={form.countryCode ?? ''}
+            onChange={(v) => setForm({ ...form, countryCode: v.toUpperCase() })}
+          />
           <div className="grid grid-cols-2 gap-2">
-            <Field label="시작일" type="date" value={form.startDate ?? ''} onChange={(v) => setForm({ ...form, startDate: v })} />
-            <Field label="종료일" type="date" value={form.endDate ?? ''} onChange={(v) => setForm({ ...form, endDate: v })} />
+            <Field
+              label="시작일"
+              type="date"
+              value={form.startDate ?? ''}
+              onChange={(v) => setForm({ ...form, startDate: v })}
+            />
+            <Field
+              label="종료일"
+              type="date"
+              value={form.endDate ?? ''}
+              onChange={(v) => setForm({ ...form, endDate: v })}
+            />
           </div>
+          <Field
+            label="설명"
+            value={form.description ?? ''}
+            onChange={(v) => setForm({ ...form, description: v })}
+          />
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-md border px-3 py-1.5">취소</button>
+            <button type="button" onClick={onClose} className="rounded-md border px-3 py-1.5">
+              취소
+            </button>
             <button
               type="submit"
               disabled={pending || !form.title}
@@ -151,7 +194,10 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-slate-700">{label}{required && <span className="text-sakura-500"> *</span>}</span>
+      <span className="text-sm text-slate-700">
+        {label}
+        {required && <span className="text-sakura-500"> *</span>}
+      </span>
       <input
         type={type}
         value={value}

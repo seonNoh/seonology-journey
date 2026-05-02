@@ -1,20 +1,35 @@
-// proto 타입의 최소 미러 (web 에선 ts-proto 결과 대신 가벼운 인터페이스로 사용).
-export type TripStatus = 'TRIP_STATUS_UNSPECIFIED' | 'TRIP_STATUS_PLANNING' | 'TRIP_STATUS_ONGOING' | 'TRIP_STATUS_COMPLETED' | 'TRIP_STATUS_ARCHIVED'
+// proto/journey/v1 의 protojson 표현을 가벼운 ts 인터페이스로 미러.
+
+export interface Money {
+  currency: string
+  amount: number | string // int64 는 protojson 에서 string 으로 직렬화될 수 있다.
+}
+
+export interface AuditTimestamps {
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type TripStatus =
+  | 'TRIP_STATUS_UNSPECIFIED'
+  | 'TRIP_STATUS_PLANNING'
+  | 'TRIP_STATUS_ONGOING'
+  | 'TRIP_STATUS_COMPLETED'
+  | 'TRIP_STATUS_ARCHIVED'
 
 export interface Trip {
-  tripId: string
+  id: string
   ownerId: string
   title: string
   description?: string
-  destination?: string
-  countryCode?: string
   startDate?: string
   endDate?: string
-  totalBudget?: number
-  budgetCurrency?: string
   status?: TripStatus
-  createdAt?: string
-  updatedAt?: string
+  coverImageUrl?: string
+  totalBudget?: Money
+  destination?: string
+  countryCode?: string
+  audit?: AuditTimestamps
 }
 
 export interface ListTripsResponse {
@@ -22,32 +37,68 @@ export interface ListTripsResponse {
 }
 
 export interface Day {
-  dayId: string
+  id: string
   tripId: string
-  dayDate: string
   dayNumber: number
+  date: string
+  dayOfWeek?: string
   region?: string
-  weatherForecast?: string
-  notes?: string
+  weather?: string
+  dailySummary?: string
+  audit?: AuditTimestamps
 }
 
 export interface ListDaysResponse {
   days: Day[]
 }
 
+export type ScheduleCategory = string
+export type TransportType = string
+
+export interface GeoPoint {
+  latitude: number
+  longitude: number
+}
+
 export interface Schedule {
-  scheduleId: string
+  id: string
   dayId: string
+  order: number
   startTime?: string
   endTime?: string
   title: string
-  category?: string
-  cost?: number
-  costCurrency?: string
-  orderIdx?: number
-  description?: string
+  region?: string
+  category?: ScheduleCategory
+  transport?: TransportType
+  transportDetail?: string
+  cost?: Money
+  placeName?: string
+  location?: GeoPoint
+  notes?: string
+  isCompleted?: boolean
+  audit?: AuditTimestamps
 }
 
 export interface ListSchedulesResponse {
   schedules: Schedule[]
+}
+
+export interface CreateTripInput {
+  title: string
+  description?: string
+  startDate?: string
+  endDate?: string
+  destination?: string
+  countryCode?: string
+  totalBudget?: Money
+}
+
+export interface CreateScheduleInput {
+  startTime?: string
+  endTime?: string
+  title: string
+  region?: string
+  notes?: string
+  cost?: Money
+  placeName?: string
 }
