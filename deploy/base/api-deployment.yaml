@@ -57,6 +57,14 @@ spec:
               value: 'seonology-journey-back.seonology-journey.svc.cluster.local:9090'
             - name: ALLOWED_ORIGINS
               value: 'https://journey.seonology.com'
+            - name: CORS_ALLOW_ORIGIN
+              value: 'https://journey.seonology.com'
+            - name: KEYCLOAK_JWKS_URL
+              value: 'https://keycloak.seonology.com/realms/seonology/protocol/openid-connect/certs'
+            - name: KEYCLOAK_ISSUER
+              value: 'https://keycloak.seonology.com/realms/seonology'
+            - name: KEYCLOAK_AUDIENCE
+              value: 'seonology-journey'
           resources:
             requests:
               cpu: '100m'
