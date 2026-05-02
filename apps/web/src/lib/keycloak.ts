@@ -2,9 +2,9 @@
 import Keycloak from 'keycloak-js'
 
 const config = {
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'https://keycloak.seonology.com',
+  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'https://auth.seonology.com',
   realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'seonology',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'seonology-journey-web',
+  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'journey-web',
 }
 
 export const keycloak = new Keycloak(config)
