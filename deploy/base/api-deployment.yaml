@@ -28,14 +28,9 @@ spec:
         app.kubernetes.io/name: seonology-journey-api
         app.kubernetes.io/part-of: seonology-journey
       annotations:
-        vault.hashicorp.com/agent-inject: 'true'
-        vault.hashicorp.com/role: 'seonology-journey-api'
-        vault.hashicorp.com/agent-inject-secret-keycloak.env: 'secret/data/seonology-journey/keycloak'
-        vault.hashicorp.com/agent-inject-template-keycloak.env: |
-          {{- with secret "secret/data/seonology-journey/keycloak" -}}
-          KEYCLOAK_ISSUER={{ .Data.data.issuer }}
-          KEYCLOAK_AUDIENCE={{ .Data.data.audience }}
-          {{- end }}
+        # Vault Agent injection は secret 登録後に有効化する.
+        # vault.hashicorp.com/agent-inject: "true"
+        # vault.hashicorp.com/role: "seonology-journey-api"
     spec:
       serviceAccountName: seonology-journey-api
       securityContext:

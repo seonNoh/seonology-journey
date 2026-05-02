@@ -30,21 +30,9 @@ spec:
         app.kubernetes.io/name: seonology-journey-back
         app.kubernetes.io/part-of: seonology-journey
       annotations:
-        vault.hashicorp.com/agent-inject: 'true'
-        vault.hashicorp.com/role: 'seonology-journey-back'
-        vault.hashicorp.com/agent-inject-secret-aws.env: 'secret/data/seonology-journey/aws'
-        vault.hashicorp.com/agent-inject-template-aws.env: |
-          {{- with secret "secret/data/seonology-journey/aws" -}}
-          AWS_ACCESS_KEY_ID={{ .Data.data.access_key_id }}
-          AWS_SECRET_ACCESS_KEY={{ .Data.data.secret_access_key }}
-          AWS_REGION=ap-northeast-1
-          {{- end }}
-        vault.hashicorp.com/agent-inject-secret-google.env: 'secret/data/seonology-journey/google'
-        vault.hashicorp.com/agent-inject-template-google.env: |
-          {{- with secret "secret/data/seonology-journey/google" -}}
-          GOOGLE_MAPS_API_KEY={{ .Data.data.maps_api_key }}
-          GOOGLE_PLACES_API_KEY={{ .Data.data.places_api_key }}
-          {{- end }}
+        # Vault Agent injection は secret 登録後に有効化する.
+        # vault.hashicorp.com/agent-inject: "true"
+        # vault.hashicorp.com/role: "seonology-journey-back"
     spec:
       serviceAccountName: seonology-journey-back
       securityContext:
