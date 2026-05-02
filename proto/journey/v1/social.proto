@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "google/protobuf/timestamp.proto";
 import "journey/v1/common.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // Companion - 동행자
 message Companion {
@@ -22,15 +22,23 @@ message AddCompanionRequest {
   string member_id = 2;
   CompanionRole role = 3;
 }
-message AddCompanionResponse { Companion companion = 1; }
-message ListCompanionsRequest { string trip_id = 1; }
-message ListCompanionsResponse { repeated Companion companions = 1; }
+message AddCompanionResponse {
+  Companion companion = 1;
+}
+message ListCompanionsRequest {
+  string trip_id = 1;
+}
+message ListCompanionsResponse {
+  repeated Companion companions = 1;
+}
 message UpdateCompanionRoleRequest {
   string trip_id = 1;
   string member_id = 2;
   CompanionRole role = 3;
 }
-message UpdateCompanionRoleResponse { Companion companion = 1; }
+message UpdateCompanionRoleResponse {
+  Companion companion = 1;
+}
 message RemoveCompanionRequest {
   string trip_id = 1;
   string member_id = 2;
@@ -48,10 +56,16 @@ message CreateTagRequest {
   string name = 1;
   string color = 2;
 }
-message CreateTagResponse { Tag tag = 1; }
+message CreateTagResponse {
+  Tag tag = 1;
+}
 message ListTagsRequest {}
-message ListTagsResponse { repeated Tag tags = 1; }
-message DeleteTagRequest { string tag_id = 1; }
+message ListTagsResponse {
+  repeated Tag tags = 1;
+}
+message DeleteTagRequest {
+  string tag_id = 1;
+}
 message DeleteTagResponse {}
 message AttachTagRequest {
   string trip_id = 1;
@@ -63,8 +77,12 @@ message DetachTagRequest {
   string tag_id = 2;
 }
 message DetachTagResponse {}
-message ListTripTagsRequest { string trip_id = 1; }
-message ListTripTagsResponse { repeated Tag tags = 1; }
+message ListTripTagsRequest {
+  string trip_id = 1;
+}
+message ListTripTagsResponse {
+  repeated Tag tags = 1;
+}
 
 // Template - 여행 템플릿
 message Template {
@@ -78,16 +96,24 @@ message SaveTripAsTemplateRequest {
   string trip_id = 1;
   string name = 2;
 }
-message SaveTripAsTemplateResponse { Template template = 1; }
+message SaveTripAsTemplateResponse {
+  Template template = 1;
+}
 message CreateTripFromTemplateRequest {
   string template_id = 1;
   string title = 2;
   string start_date = 3;
 }
-message CreateTripFromTemplateResponse { string trip_id = 1; }
+message CreateTripFromTemplateResponse {
+  string trip_id = 1;
+}
 message ListTemplatesRequest {}
-message ListTemplatesResponse { repeated Template templates = 1; }
-message DeleteTemplateRequest { string template_id = 1; }
+message ListTemplatesResponse {
+  repeated Template templates = 1;
+}
+message DeleteTemplateRequest {
+  string template_id = 1;
+}
 message DeleteTemplateResponse {}
 
 // FavoritePlace
@@ -106,10 +132,16 @@ message AddFavoritePlaceRequest {
   string google_place_id = 3;
   string memo = 4;
 }
-message AddFavoritePlaceResponse { FavoritePlace place = 1; }
+message AddFavoritePlaceResponse {
+  FavoritePlace place = 1;
+}
 message ListFavoritePlacesRequest {}
-message ListFavoritePlacesResponse { repeated FavoritePlace places = 1; }
-message RemoveFavoritePlaceRequest { string place_id = 1; }
+message ListFavoritePlacesResponse {
+  repeated FavoritePlace places = 1;
+}
+message RemoveFavoritePlaceRequest {
+  string place_id = 1;
+}
 message RemoveFavoritePlaceResponse {}
 
 // Share
@@ -125,10 +157,16 @@ message CreateShareRequest {
   CompanionRole permission = 2;
   google.protobuf.Timestamp expires_at = 3;
 }
-message CreateShareResponse { Share share = 1; }
-message GetShareRequest { string code = 1; }
+message CreateShareResponse {
+  Share share = 1;
+}
+message GetShareRequest {
+  string code = 1;
+}
 message GetShareResponse {
   Share share = 1;
 }
-message RevokeShareRequest { string code = 1; }
+message RevokeShareRequest {
+  string code = 1;
+}
 message RevokeShareResponse {}

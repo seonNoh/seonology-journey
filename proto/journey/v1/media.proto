@@ -2,17 +2,17 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "google/protobuf/timestamp.proto";
 import "journey/v1/common.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // Media - 사진/영상 메타
 message Media {
   string id = 1;
   string trip_id = 2;
-  string day_id = 3;       // optional
-  string schedule_id = 4;  // optional
+  string day_id = 3; // optional
+  string schedule_id = 4; // optional
   string s3_key = 5;
   string thumbnail_s3_key = 6;
   string mime_type = 7;
@@ -32,10 +32,10 @@ message GetUploadUrlRequest {
   int64 size = 4;
 }
 message GetUploadUrlResponse {
-  string upload_url = 1;     // presigned PUT URL
+  string upload_url = 1; // presigned PUT URL
   string s3_key = 2;
   google.protobuf.Timestamp expires_at = 3;
-  string media_id = 4;       // pre-allocated id
+  string media_id = 4; // pre-allocated id
 }
 
 message ConfirmUploadRequest {
@@ -46,7 +46,9 @@ message ConfirmUploadRequest {
   string schedule_id = 5;
   string caption = 6;
 }
-message ConfirmUploadResponse { Media media = 1; }
+message ConfirmUploadResponse {
+  Media media = 1;
+}
 
 message ListMediaRequest {
   string trip_id = 1;
@@ -58,7 +60,9 @@ message ListMediaResponse {
   PageInfo page = 2;
 }
 
-message DeleteMediaRequest { string media_id = 1; }
+message DeleteMediaRequest {
+  string media_id = 1;
+}
 message DeleteMediaResponse {}
 
 message GetMediaUrlRequest {

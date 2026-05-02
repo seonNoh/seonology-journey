@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "journey/v1/common.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // Trip - 여행 전체
 message Trip {
@@ -13,7 +13,7 @@ message Trip {
   string title = 3;
   string description = 4;
   string start_date = 5; // YYYY-MM-DD
-  string end_date = 6;   // YYYY-MM-DD
+  string end_date = 6; // YYYY-MM-DD
   TripStatus status = 7;
   string cover_image_url = 8;
   Money total_budget = 9;
@@ -27,7 +27,7 @@ message Day {
   string id = 1;
   string trip_id = 2;
   int32 day_number = 3;
-  string date = 4;        // YYYY-MM-DD
+  string date = 4; // YYYY-MM-DD
   string day_of_week = 5; // 월/화/...
   string region = 6;
   string weather = 7;
@@ -46,10 +46,16 @@ message CreateTripRequest {
   string country_code = 6;
   Money total_budget = 7;
 }
-message CreateTripResponse { Trip trip = 1; }
+message CreateTripResponse {
+  Trip trip = 1;
+}
 
-message GetTripRequest { string trip_id = 1; }
-message GetTripResponse { Trip trip = 1; }
+message GetTripRequest {
+  string trip_id = 1;
+}
+message GetTripResponse {
+  Trip trip = 1;
+}
 
 message ListTripsRequest {
   TripStatus status = 1; // unspecified = all
@@ -72,15 +78,23 @@ message UpdateTripRequest {
   string destination = 9;
   string country_code = 10;
 }
-message UpdateTripResponse { Trip trip = 1; }
+message UpdateTripResponse {
+  Trip trip = 1;
+}
 
-message DeleteTripRequest { string trip_id = 1; }
+message DeleteTripRequest {
+  string trip_id = 1;
+}
 message DeleteTripResponse {}
 
 // === Day CRUD ===
 
-message ListDaysRequest { string trip_id = 1; }
-message ListDaysResponse { repeated Day days = 1; }
+message ListDaysRequest {
+  string trip_id = 1;
+}
+message ListDaysResponse {
+  repeated Day days = 1;
+}
 
 message UpdateDayRequest {
   string day_id = 1;
@@ -88,4 +102,6 @@ message UpdateDayRequest {
   string weather = 3;
   string daily_summary = 4;
 }
-message UpdateDayResponse { Day day = 1; }
+message UpdateDayResponse {
+  Day day = 1;
+}

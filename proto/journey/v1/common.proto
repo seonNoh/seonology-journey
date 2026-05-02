@@ -2,14 +2,14 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // Money - 통화와 금액 (소수 표현은 정수 + scale)
 message Money {
   string currency = 1; // ISO 4217 (KRW, JPY, USD ...)
-  int64 amount = 2;    // 최소 단위 (예: KRW 원, JPY 엔)
+  int64 amount = 2; // 최소 단위 (예: KRW 원, JPY 엔)
 }
 
 // GeoPoint - 위경도

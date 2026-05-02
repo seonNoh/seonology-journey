@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
-import "journey/v1/trip.proto";
+import "journey/v1/external.proto";
 import "journey/v1/itinerary.proto";
 import "journey/v1/media.proto";
+import "journey/v1/realtime.proto";
 import "journey/v1/record.proto";
 import "journey/v1/social.proto";
-import "journey/v1/external.proto";
-import "journey/v1/realtime.proto";
+import "journey/v1/trip.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // JourneyService - apps/back gRPC 서비스
 // apps/api 는 이 서비스만 클라이언트로 호출.

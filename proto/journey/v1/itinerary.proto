@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "journey/v1/common.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // Schedule - 일정 항목
 message Schedule {
@@ -12,7 +12,7 @@ message Schedule {
   string day_id = 2;
   int32 order = 3;
   string start_time = 4; // HH:mm
-  string end_time = 5;   // HH:mm
+  string end_time = 5; // HH:mm
   string title = 6;
   string region = 7;
   ScheduleCategory category = 8;
@@ -70,10 +70,16 @@ message CreateScheduleRequest {
   GeoPoint location = 11;
   string notes = 12;
 }
-message CreateScheduleResponse { Schedule schedule = 1; }
+message CreateScheduleResponse {
+  Schedule schedule = 1;
+}
 
-message ListSchedulesRequest { string day_id = 1; }
-message ListSchedulesResponse { repeated Schedule schedules = 1; }
+message ListSchedulesRequest {
+  string day_id = 1;
+}
+message ListSchedulesResponse {
+  repeated Schedule schedules = 1;
+}
 
 message UpdateScheduleRequest {
   string schedule_id = 1;
@@ -90,16 +96,22 @@ message UpdateScheduleRequest {
   string notes = 12;
   bool is_completed = 13;
 }
-message UpdateScheduleResponse { Schedule schedule = 1; }
+message UpdateScheduleResponse {
+  Schedule schedule = 1;
+}
 
-message DeleteScheduleRequest { string schedule_id = 1; }
+message DeleteScheduleRequest {
+  string schedule_id = 1;
+}
 message DeleteScheduleResponse {}
 
 message ReorderSchedulesRequest {
   string day_id = 1;
   repeated string schedule_ids_in_order = 2;
 }
-message ReorderSchedulesResponse { repeated Schedule schedules = 1; }
+message ReorderSchedulesResponse {
+  repeated Schedule schedules = 1;
+}
 
 // === Meal CRUD ===
 
@@ -114,10 +126,16 @@ message UpsertMealRequest {
   string review = 8;
   GeoPoint location = 9;
 }
-message UpsertMealResponse { Meal meal = 1; }
+message UpsertMealResponse {
+  Meal meal = 1;
+}
 
-message ListMealsRequest { string day_id = 1; }
-message ListMealsResponse { repeated Meal meals = 1; }
+message ListMealsRequest {
+  string day_id = 1;
+}
+message ListMealsResponse {
+  repeated Meal meals = 1;
+}
 
 message DeleteMealRequest {
   string day_id = 1;
@@ -138,10 +156,18 @@ message UpsertAccommodationRequest {
   GeoPoint location = 8;
   string reservation_id = 9;
 }
-message UpsertAccommodationResponse { Accommodation accommodation = 1; }
+message UpsertAccommodationResponse {
+  Accommodation accommodation = 1;
+}
 
-message GetAccommodationRequest { string day_id = 1; }
-message GetAccommodationResponse { Accommodation accommodation = 1; }
+message GetAccommodationRequest {
+  string day_id = 1;
+}
+message GetAccommodationResponse {
+  Accommodation accommodation = 1;
+}
 
-message DeleteAccommodationRequest { string day_id = 1; }
+message DeleteAccommodationRequest {
+  string day_id = 1;
+}
 message DeleteAccommodationResponse {}

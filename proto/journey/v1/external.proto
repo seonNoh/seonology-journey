@@ -2,10 +2,10 @@ syntax = "proto3";
 
 package journey.v1;
 
-option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
-
 import "google/protobuf/timestamp.proto";
 import "journey/v1/common.proto";
+
+option go_package = "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1;journeyv1";
 
 // === Statistics ===
 
@@ -19,8 +19,12 @@ message TripStatistics {
   int32 total_photos = 7;
   int32 visited_regions = 8;
 }
-message GetTripStatisticsRequest { string trip_id = 1; }
-message GetTripStatisticsResponse { TripStatistics stats = 1; }
+message GetTripStatisticsRequest {
+  string trip_id = 1;
+}
+message GetTripStatisticsResponse {
+  TripStatistics stats = 1;
+}
 
 message YearlyStatistics {
   int32 year = 1;
@@ -29,27 +33,39 @@ message YearlyStatistics {
   Money total_expense = 4;
   repeated string countries = 5;
 }
-message GetYearlyStatisticsRequest { int32 year = 1; }
-message GetYearlyStatisticsResponse { YearlyStatistics stats = 1; }
+message GetYearlyStatisticsRequest {
+  int32 year = 1;
+}
+message GetYearlyStatisticsResponse {
+  YearlyStatistics stats = 1;
+}
 
 // === External integrations ===
 
-message GeocodeRequest { string query = 1; }
+message GeocodeRequest {
+  string query = 1;
+}
 message GeocodePlace {
   string place_id = 1;
   string name = 2;
   string address = 3;
   GeoPoint location = 4;
 }
-message GeocodeResponse { repeated GeocodePlace places = 1; }
+message GeocodeResponse {
+  repeated GeocodePlace places = 1;
+}
 
-message ReverseGeocodeRequest { GeoPoint location = 1; }
-message ReverseGeocodeResponse { GeocodePlace place = 1; }
+message ReverseGeocodeRequest {
+  GeoPoint location = 1;
+}
+message ReverseGeocodeResponse {
+  GeocodePlace place = 1;
+}
 
 message GetExchangeRateRequest {
-  string base = 1;   // KRW
+  string base = 1; // KRW
   string target = 2; // JPY
-  string date = 3;   // YYYY-MM-DD (optional)
+  string date = 3; // YYYY-MM-DD (optional)
 }
 message GetExchangeRateResponse {
   string base = 1;
