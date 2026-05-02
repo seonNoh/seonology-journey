@@ -216,3 +216,102 @@ export interface Note {
 export interface ListNotesResponse {
   notes: Note[]
 }
+
+export type ReservationType =
+  | 'RESERVATION_TYPE_UNSPECIFIED'
+  | 'RESERVATION_TYPE_FLIGHT'
+  | 'RESERVATION_TYPE_HOTEL'
+  | 'RESERVATION_TYPE_ACTIVITY'
+  | 'RESERVATION_TYPE_RESTAURANT'
+  | 'RESERVATION_TYPE_TRANSPORT'
+
+export interface Reservation {
+  id: string
+  tripId: string
+  type: ReservationType
+  vendor?: string
+  confirmNumber?: string
+  reservedAt?: string
+  cost?: Money
+  attachmentS3Key?: string
+  notes?: string
+}
+
+export interface ListReservationsResponse {
+  reservations: Reservation[]
+}
+
+export interface CreateReservationInput {
+  type: ReservationType
+  vendor?: string
+  confirmNumber?: string
+  reservedAt?: string
+  cost?: Money
+  notes?: string
+}
+
+export interface Tag {
+  id: string
+  userId?: string
+  name: string
+  color?: string
+}
+
+export interface ListTagsResponse {
+  tags: Tag[]
+}
+
+export type CompanionRole =
+  | 'COMPANION_ROLE_UNSPECIFIED'
+  | 'COMPANION_ROLE_OWNER'
+  | 'COMPANION_ROLE_EDITOR'
+  | 'COMPANION_ROLE_VIEWER'
+
+export interface Companion {
+  tripId: string
+  memberId: string
+  displayName?: string
+  avatarUrl?: string
+  role: CompanionRole
+  invitedAt?: string
+}
+
+export interface ListCompanionsResponse {
+  companions: Companion[]
+}
+
+export interface Media {
+  id: string
+  tripId: string
+  dayId?: string
+  scheduleId?: string
+  s3Key: string
+  thumbnailS3Key?: string
+  mimeType?: string
+  size?: number | string
+  takenAt?: string
+  caption?: string
+}
+
+export interface ListMediaResponse {
+  items: Media[]
+}
+
+export interface GetUploadUrlResponse {
+  uploadUrl: string
+  s3Key: string
+  expiresAt?: string
+  mediaId: string
+}
+
+export interface GetMediaUrlResponse {
+  url: string
+  expiresAt?: string
+}
+
+export interface Share {
+  code: string
+  tripId: string
+  permission: CompanionRole
+  expiresAt?: string
+}

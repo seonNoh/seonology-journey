@@ -1,6 +1,18 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, MapPin, Wallet, StickyNote, ListChecks } from 'lucide-react'
+import type { ReactNode } from 'react'
+import {
+  ArrowLeft,
+  CalendarDays,
+  MapPin,
+  Wallet,
+  StickyNote,
+  ListChecks,
+  Ticket,
+  Tag as TagIcon,
+  Users,
+  Image as ImageIcon,
+} from 'lucide-react'
 import { api } from '../lib/api'
 import type { Day, ListDaysResponse, Trip } from '../lib/types'
 
@@ -42,25 +54,14 @@ export function TripDetailPage() {
           )}
         </div>
       )}
-      <div className="grid grid-cols-3 gap-2">
-        <Link
-          to={`/trips/${tripId}/expenses`}
-          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
-        >
-          <Wallet className="h-4 w-4" /> 지출
-        </Link>
-        <Link
-          to={`/trips/${tripId}/notes`}
-          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
-        >
-          <StickyNote className="h-4 w-4" /> 메모
-        </Link>
-        <Link
-          to={`/trips/${tripId}/checklist`}
-          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
-        >
-          <ListChecks className="h-4 w-4" /> 체크
-        </Link>
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+        <NavBtn to={`/trips/${tripId}/expenses`} icon={<Wallet className="h-4 w-4" />} label="지출" />
+        <NavBtn to={`/trips/${tripId}/notes`} icon={<StickyNote className="h-4 w-4" />} label="메모" />
+        <NavBtn to={`/trips/${tripId}/checklist`} icon={<ListChecks className="h-4 w-4" />} label="체크" />
+        <NavBtn to={`/trips/${tripId}/reservations`} icon={<Ticket className="h-4 w-4" />} label="예약" />
+        <NavBtn to={`/trips/${tripId}/tags`} icon={<TagIcon className="h-4 w-4" />} label="태그" />
+        <NavBtn to={`/trips/${tripId}/companions`} icon={<Users className="h-4 w-4" />} label="동행" />
+        <NavBtn to={`/trips/${tripId}/media`} icon={<ImageIcon className="h-4 w-4" />} label="사진" />
       </div>
       <h2 className="text-lg font-bold text-slate-800">일정</h2>
       <ul className="space-y-2">
@@ -88,5 +89,17 @@ export function TripDetailPage() {
         )}
       </ul>
     </section>
+  )
+}
+
+function NavBtn({ to, icon, label }: { to: string; icon: ReactNode; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white p-3 text-xs font-bold text-sakura-700 shadow-sm hover:shadow"
+    >
+      {icon}
+      {label}
+    </Link>
   )
 }
