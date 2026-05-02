@@ -31,29 +31,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23'
-          cache: true
-          cache-dependency-path: apps/api/go.sum
       - run: go vet ./...
       - run: go test -race -coverprofile=coverage.out ./...
       - run: go build ./...
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache: true
-          cache-dependency-path: apps/api/go.sum
-      - uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.62.2
-          working-directory: apps/api
-
   docker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, lint]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

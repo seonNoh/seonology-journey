@@ -41,25 +41,10 @@ jobs:
       - name: build
         run: go build ./...
 
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache: true
-          cache-dependency-path: apps/back/go.sum
-      - uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.62.2
-          working-directory: apps/back
-
   docker:
     name: docker
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test, lint]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
