@@ -102,3 +102,117 @@ export interface CreateScheduleInput {
   cost?: Money
   placeName?: string
 }
+
+export type MealType =
+  | 'MEAL_TYPE_UNSPECIFIED'
+  | 'MEAL_TYPE_BREAKFAST'
+  | 'MEAL_TYPE_LUNCH'
+  | 'MEAL_TYPE_DINNER'
+
+export type MealSource =
+  | 'MEAL_SOURCE_UNSPECIFIED'
+  | 'MEAL_SOURCE_HOTEL'
+  | 'MEAL_SOURCE_LOCAL'
+  | 'MEAL_SOURCE_CONVENIENCE'
+  | 'MEAL_SOURCE_SKIP'
+
+export interface Meal {
+  dayId: string
+  mealType: MealType
+  source?: MealSource
+  restaurantName?: string
+  menu?: string
+  cost?: Money
+  rating?: number
+  review?: string
+}
+
+export interface ListMealsResponse {
+  meals: Meal[]
+}
+
+export interface Accommodation {
+  dayId: string
+  name: string
+  checkInTime?: string
+  checkOutTime?: string
+  cost?: Money
+  amenities?: string
+  address?: string
+}
+
+export type ExpenseCategory =
+  | 'EXPENSE_CATEGORY_UNSPECIFIED'
+  | 'EXPENSE_CATEGORY_TRANSPORT'
+  | 'EXPENSE_CATEGORY_FOOD'
+  | 'EXPENSE_CATEGORY_LODGING'
+  | 'EXPENSE_CATEGORY_ACTIVITY'
+  | 'EXPENSE_CATEGORY_SHOPPING'
+  | 'EXPENSE_CATEGORY_OTHER'
+
+export type PaymentMethod =
+  | 'PAYMENT_METHOD_UNSPECIFIED'
+  | 'PAYMENT_METHOD_CASH'
+  | 'PAYMENT_METHOD_CARD'
+  | 'PAYMENT_METHOD_TRANSFER'
+
+export interface Expense {
+  id: string
+  tripId: string
+  dayId?: string
+  category: ExpenseCategory
+  amount: Money
+  paymentMethod?: PaymentMethod
+  description?: string
+  spentAt?: string
+}
+
+export interface ListExpensesResponse {
+  expenses: Expense[]
+}
+
+export interface ExpenseSummary {
+  tripId: string
+  grandTotal?: Money
+  byCategory: { category: ExpenseCategory; total: Money }[]
+  byDay: { date: string; total: Money }[]
+}
+
+export interface CreateExpenseInput {
+  dayId?: string
+  category: ExpenseCategory
+  amount: Money
+  paymentMethod?: PaymentMethod
+  description?: string
+  spentAt?: string
+}
+
+export type ChecklistCategory =
+  | 'CHECKLIST_CATEGORY_UNSPECIFIED'
+  | 'CHECKLIST_CATEGORY_PACKING'
+  | 'CHECKLIST_CATEGORY_TODO'
+  | 'CHECKLIST_CATEGORY_BOOKING'
+
+export interface ChecklistItem {
+  id: string
+  tripId: string
+  category: ChecklistCategory
+  item: string
+  isChecked?: boolean
+}
+
+export interface ListChecklistResponse {
+  items: ChecklistItem[]
+}
+
+export interface Note {
+  id: string
+  tripId: string
+  dayId?: string
+  content: string
+  mood?: string
+}
+
+export interface ListNotesResponse {
+  notes: Note[]
+}

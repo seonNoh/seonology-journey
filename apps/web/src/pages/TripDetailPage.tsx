@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CalendarDays, MapPin } from 'lucide-react'
+import { ArrowLeft, CalendarDays, MapPin, Wallet, StickyNote, ListChecks } from 'lucide-react'
 import { api } from '../lib/api'
 import type { Day, ListDaysResponse, Trip } from '../lib/types'
 
@@ -42,6 +42,26 @@ export function TripDetailPage() {
           )}
         </div>
       )}
+      <div className="grid grid-cols-3 gap-2">
+        <Link
+          to={`/trips/${tripId}/expenses`}
+          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
+        >
+          <Wallet className="h-4 w-4" /> 지출
+        </Link>
+        <Link
+          to={`/trips/${tripId}/notes`}
+          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
+        >
+          <StickyNote className="h-4 w-4" /> 메모
+        </Link>
+        <Link
+          to={`/trips/${tripId}/checklist`}
+          className="flex items-center justify-center gap-2 rounded-xl bg-white p-3 text-sm font-bold text-sakura-700 shadow-sm hover:shadow"
+        >
+          <ListChecks className="h-4 w-4" /> 체크
+        </Link>
+      </div>
       <h2 className="text-lg font-bold text-slate-800">일정</h2>
       <ul className="space-y-2">
         {days.data?.days?.map((d: Day) => (
