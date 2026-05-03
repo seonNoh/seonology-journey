@@ -61,9 +61,9 @@ spec:
             - name: CORS_ALLOW_ORIGIN
               value: 'https://journey.seonology.com'
             - name: KEYCLOAK_JWKS_URL
-              value: 'https://auth.seonology.com/realms/seonology/protocol/openid-connect/certs'
+              value: 'https://auth.seonology.com/realms/seonology-journey/protocol/openid-connect/certs'
             - name: KEYCLOAK_ISSUER
-              value: 'https://auth.seonology.com/realms/seonology'
+              value: 'https://auth.seonology.com/realms/seonology-journey'
             - name: KEYCLOAK_AUDIENCE
               value: 'seonology-journey'
           resources:

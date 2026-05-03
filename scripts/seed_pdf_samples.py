@@ -23,10 +23,10 @@ import requests
 
 API_BASE = os.environ.get("API_BASE", "https://journey-api.seonology.com")
 KC_BASE = os.environ.get(
-    "KEYCLOAK_BASE", "https://auth.seonology.com/realms/seonology"
+    "KEYCLOAK_BASE", "https://auth.seonology.com/realms/seonology-journey"
 )
-USER = os.environ.get("KC_USER", "testuser")
-PASS = os.environ.get("KC_PASS", "Test1234!")
+USER = os.environ.get("KC_USER", "seon")
+PASS = os.environ.get("KC_PASS", "!Tjs78xor0512")
 CLIENT_ID = os.environ.get("KC_CLIENT", "journey-web")
 
 

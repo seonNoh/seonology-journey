@@ -21,7 +21,7 @@ android {
         manifestPlaceholders["appAuthRedirectScheme"] = "com.seonology.journey"
 
         buildConfigField("String", "API_BASE", "\"https://journey-api.seonology.com\"")
-        buildConfigField("String", "KEYCLOAK_ISSUER", "\"https://auth.seonology.com/realms/seonology\"")
+        buildConfigField("String", "KEYCLOAK_ISSUER", "\"https://auth.seonology.com/realms/seonology-journey\"")
         buildConfigField("String", "KEYCLOAK_CLIENT_ID", "\"journey-android\"")
     }
 
