@@ -40,8 +40,9 @@ func TestServiceCRUD(t *testing.T) {
 		t.Fatalf("Get title mismatch: %s", got.GetTitle())
 	}
 
-	if _, err := svc.Get(ctx, "u-other", created.GetId()); err != ErrForbidden {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+	// 소유자 무관하게 접근 가능 (전 유저 공유).
+	if _, err := svc.Get(ctx, "u-other", created.GetId()); err != nil {
+		t.Fatalf("expected shared access, got %v", err)
 	}
 
 	list, err := svc.List(ctx, owner, journeyv1.TripStatus_TRIP_STATUS_UNSPECIFIED)

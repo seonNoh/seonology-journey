@@ -59,15 +59,12 @@ func (r *MemoryRepo) Get(_ context.Context, id string) (*journeyv1.Trip, error) 
 	return clone(t), nil
 }
 
-// ListByOwner - owner 의 Trip 목록 (최근 생성 순).
-func (r *MemoryRepo) ListByOwner(_ context.Context, ownerID string, status journeyv1.TripStatus) ([]*journeyv1.Trip, error) {
+// ListByOwner - Trip 목록 (최근 생성 순). ownerID 무시 — 전 유저 공유.
+func (r *MemoryRepo) ListByOwner(_ context.Context, _ string, status journeyv1.TripStatus) ([]*journeyv1.Trip, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*journeyv1.Trip, 0, len(r.store))
 	for _, t := range r.store {
-		if t.GetOwnerId() != ownerID {
-			continue
-		}
 		if status != journeyv1.TripStatus_TRIP_STATUS_UNSPECIFIED && t.GetStatus() != status {
 			continue
 		}
@@ -141,16 +138,9 @@ func (s *Service) Create(ctx context.Context, ownerID string, req *journeyv1.Cre
 	return t, nil
 }
 
-// Get - 조회 (소유자 검증).
-func (s *Service) Get(ctx context.Context, ownerID, id string) (*journeyv1.Trip, error) {
-	t, err := s.repo.Get(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if t.GetOwnerId() != ownerID {
-		return nil, ErrForbidden
-	}
-	return t, nil
+// Get - 조회. 소유자 무관 — 전 유저 공유.
+func (s *Service) Get(ctx context.Context, _, id string) (*journeyv1.Trip, error) {
+	return s.repo.Get(ctx, id)
 }
 
 // List - owner 의 trip 목록.
@@ -158,14 +148,11 @@ func (s *Service) List(ctx context.Context, ownerID string, status journeyv1.Tri
 	return s.repo.ListByOwner(ctx, ownerID, status)
 }
 
-// Update - 갱신.
-func (s *Service) Update(ctx context.Context, ownerID string, req *journeyv1.UpdateTripRequest) (*journeyv1.Trip, error) {
+// Update - 갱신. 소유자 무관 — 전 유저 공유.
+func (s *Service) Update(ctx context.Context, _ string, req *journeyv1.UpdateTripRequest) (*journeyv1.Trip, error) {
 	t, err := s.repo.Get(ctx, req.GetTripId())
 	if err != nil {
 		return nil, err
-	}
-	if t.GetOwnerId() != ownerID {
-		return nil, ErrForbidden
 	}
 	if req.GetTitle() != "" {
 		t.Title = req.GetTitle()
@@ -204,14 +191,7 @@ func (s *Service) Update(ctx context.Context, ownerID string, req *journeyv1.Upd
 	return t, nil
 }
 
-// Delete - 삭제.
-func (s *Service) Delete(ctx context.Context, ownerID, id string) error {
-	t, err := s.repo.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-	if t.GetOwnerId() != ownerID {
-		return ErrForbidden
-	}
+// Delete - 삭제. 소유자 무관 — 전 유저 공유.
+func (s *Service) Delete(ctx context.Context, _, id string) error {
 	return s.repo.Delete(ctx, id)
 }
