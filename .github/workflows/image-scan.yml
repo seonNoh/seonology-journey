@@ -1,0 +1,41 @@
+name: Image Scan
+
+on:
+  workflow_run:
+    workflows: ['Back CI', 'API CI', 'Web CI']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Full image reference to scan'
+        required: true
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      matrix:
+        image:
+          - ghcr.io/seonnoh/seonology-journey-back:latest
+          - ghcr.io/seonnoh/seonology-journey-api:latest
+          - ghcr.io/seonnoh/seonology-journey-web:latest
+    steps:
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ github.event.inputs.image || matrix.image }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  osv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google/osv-scanner-action/osv-scanner-action@v1
+        with:
+          scan-args: |-
+            --lockfile=apps/back/go.sum
+            --lockfile=apps/api/go.sum
+            --lockfile=apps/web/pnpm-lock.yaml

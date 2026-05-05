@@ -25,6 +25,15 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md,yaml,yml}": [
       "prettier --write"
+    ],
+    "apps/back/**/*.go": [
+      "bash -c 'cd apps/back && golangci-lint run --fix'"
+    ],
+    "apps/api/**/*.go": [
+      "bash -c 'cd apps/api && golangci-lint run --fix'"
+    ],
+    "proto/**/*.proto": [
+      "buf lint"
     ]
   }
 }

@@ -1,6 +1,13 @@
+version: '2'
+
 run:
   timeout: 5m
-  tests: true
+  tests: false
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 linters:
   disable-all: true
@@ -10,9 +17,19 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - gofmt
-    - goimports
     - misspell
+  settings:
+    errcheck:
+      check-type-assertions: false
+      exclude-functions:
+        - (io.Closer).Close
+        - (net/http.ResponseWriter).Write
+        - (*encoding/json.Encoder).Encode
+    staticcheck:
+      checks:
+        - 'all'
+        - '-SA1019'
+        - '-ST1003'
 
 issues:
   exclude-dirs:

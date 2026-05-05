@@ -27,9 +27,11 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../lib/api'
+import { MapPicker } from '../components/MapPicker'
 import type {
   Accommodation,
   CreateScheduleInput,
+  GeoPoint,
   ListMealsResponse,
   ListSchedulesResponse,
   Meal,
@@ -68,8 +70,7 @@ export function DayDetailPage() {
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   const createMut = useMutation({
-    mutationFn: (input: CreateScheduleInput) =>
-      api.post(`/days/${dayId}/schedules`, input),
+    mutationFn: (input: CreateScheduleInput) => api.post(`/days/${dayId}/schedules`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['schedules', dayId] })
       setOpen(false)
@@ -129,11 +130,7 @@ export function DayDetailPage() {
         <SortableContext items={sorted.map((s) => s.id)} strategy={verticalListSortingStrategy}>
           <ul className="space-y-2">
             {sorted.map((s) => (
-              <SortableItem
-                key={s.id}
-                schedule={s}
-                onDelete={() => deleteMut.mutate(s.id)}
-              />
+              <SortableItem key={s.id} schedule={s} onDelete={() => deleteMut.mutate(s.id)} />
             ))}
             {sorted.length === 0 && !list.isLoading && (
               <li className="rounded-xl bg-white p-6 text-center text-slate-500 shadow-sm">
@@ -189,9 +186,7 @@ function SortableItem({ schedule, onDelete }: { schedule: Schedule; onDelete: ()
         {schedule.placeName && (
           <p className="mt-0.5 text-xs text-slate-500">{schedule.placeName}</p>
         )}
-        {schedule.notes && (
-          <p className="mt-1 text-sm text-slate-600">{schedule.notes}</p>
-        )}
+        {schedule.notes && <p className="mt-1 text-sm text-slate-600">{schedule.notes}</p>}
         {schedule.cost ? (
           <p className="mt-1 text-sm text-sakura-600">
             {schedule.cost.amount} {schedule.cost.currency}
@@ -227,9 +222,10 @@ function CreateScheduleModal({
     costAmount: '',
     costCurrency: 'JPY',
   })
+  const [location, setLocation] = useState<GeoPoint | undefined>(undefined)
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold text-slate-800">일정 추가</h2>
         <form
           className="mt-4 space-y-3"
@@ -242,9 +238,8 @@ function CreateScheduleModal({
               endTime: form.endTime || undefined,
               notes: form.notes || undefined,
               placeName: form.placeName || undefined,
-              cost: amount
-                ? { currency: form.costCurrency, amount }
-                : undefined,
+              location,
+              cost: amount ? { currency: form.costCurrency, amount } : undefined,
             })
           }}
         >
@@ -273,11 +268,21 @@ function CreateScheduleModal({
             value={form.placeName}
             onChange={(v) => setForm({ ...form, placeName: v })}
           />
-          <Field
-            label="메모"
-            value={form.notes}
-            onChange={(v) => setForm({ ...form, notes: v })}
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">위치 선택</label>
+            <MapPicker
+              latitude={location?.latitude}
+              longitude={location?.longitude}
+              onChange={(coords) => setLocation({ latitude: coords.lat, longitude: coords.lng })}
+              accessToken={import.meta.env.VITE_MAPBOX_TOKEN}
+            />
+            {location && (
+              <p className="mt-1 text-xs text-slate-500">
+                {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+              </p>
+            )}
+          </div>
+          <Field label="메모" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
           <div className="grid grid-cols-2 gap-2">
             <Field
               label="비용"
@@ -354,8 +359,7 @@ function MealSection({ dayId }: { dayId: string }) {
   })
 
   const upsertMut = useMutation({
-    mutationFn: (m: Partial<Meal> & { mealType: MealType }) =>
-      api.put(`/days/${dayId}/meals`, m),
+    mutationFn: (m: Partial<Meal> & { mealType: MealType }) => api.put(`/days/${dayId}/meals`, m),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['meals', dayId] })
       setEditing(null)
@@ -483,9 +487,7 @@ function MealEditModal({
             <span className="text-sm text-slate-700">유형</span>
             <select
               value={form.source}
-              onChange={(e) =>
-                setForm({ ...form, source: e.target.value as MealSource })
-              }
+              onChange={(e) => setForm({ ...form, source: e.target.value as MealSource })}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2"
             >
               {MEAL_SOURCES.map((s) => (
@@ -500,11 +502,7 @@ function MealEditModal({
             value={form.restaurantName}
             onChange={(v) => setForm({ ...form, restaurantName: v })}
           />
-          <Field
-            label="메뉴"
-            value={form.menu}
-            onChange={(v) => setForm({ ...form, menu: v })}
-          />
+          <Field label="메뉴" value={form.menu} onChange={(v) => setForm({ ...form, menu: v })} />
           <div className="grid grid-cols-2 gap-2">
             <Field
               label="비용"
@@ -559,9 +557,7 @@ function AccommodationSection({ dayId }: { dayId: string }) {
     queryKey: ['accommodation', dayId],
     queryFn: async () => {
       try {
-        return await api.get<{ accommodation?: Accommodation }>(
-          `/days/${dayId}/accommodation`,
-        )
+        return await api.get<{ accommodation?: Accommodation }>(`/days/${dayId}/accommodation`)
       } catch (e) {
         // 미설정이면 404 가능 — 빈 응답으로 처리
         if ((e as Error).message.includes('404')) return { accommodation: undefined }
@@ -572,8 +568,7 @@ function AccommodationSection({ dayId }: { dayId: string }) {
   })
 
   const upsertMut = useMutation({
-    mutationFn: (a: Partial<Accommodation>) =>
-      api.put(`/days/${dayId}/accommodation`, a),
+    mutationFn: (a: Partial<Accommodation>) => api.put(`/days/${dayId}/accommodation`, a),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['accommodation', dayId] })
       setEditing(false)

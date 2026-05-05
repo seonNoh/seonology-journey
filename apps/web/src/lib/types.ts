@@ -101,6 +101,7 @@ export interface CreateScheduleInput {
   notes?: string
   cost?: Money
   placeName?: string
+  location?: GeoPoint
 }
 
 export type MealType =

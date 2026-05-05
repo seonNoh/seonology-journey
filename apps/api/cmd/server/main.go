@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/auth"
+	"github.com/seonNoh/seonology-journey/apps/api/internal/external"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/grpcclient"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/handler"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/ws"
@@ -31,7 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("grpc dial: %v", err)
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck
 	jc := grpcclient.NewJourneyClient(conn)
 
 	verifier, err := auth.NewVerifier(jwksURL, issuer, aud)
@@ -41,6 +42,7 @@ func main() {
 
 	hub := ws.New()
 	api := handler.New(jc)
+	extSvc := external.NewService(external.NewMemoryCache())
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -68,6 +70,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(verifier.Middleware())
 		api.Mount(r)
+		extSvc.Mount(r)
 		// WebSocket: 프론트는 ?token=<JWT> 형식으로 붙일 수 있도록, 헤더와 query 둘 다 지원하려면
 		// 클라이언트는 Authorization 헤더를 사용. 브라우저에서 직접 붙이려면 쿠키나 subprotocol 필요.
 		r.Get("/ws/trips/{tripId}", hub.Handler(
@@ -122,6 +125,9 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", allow)
 		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Internal-Token")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self' https://*.seonology.com wss://*.seonology.com; img-src 'self' https://*.amazonaws.com data:; style-src 'self' 'unsafe-inline'")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return

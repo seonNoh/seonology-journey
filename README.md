@@ -36,6 +36,66 @@ pnpm install
 
 ## 빌드 / 테스트
 
+## 로컬 개발 환경 가이드
+
+### 사전 요구사항
+
+- Go 1.25+
+- Node.js 22+ / pnpm 9+
+- Docker (DynamoDB Local용)
+- AWS CLI (프로파일 `seonology` 설정 필요)
+- buf CLI (proto 컴파일)
+- Android Studio (Android 빌드 시)
+
+### DynamoDB Local 실행
+
+```bash
+docker run -d --name dynamodb-local -p 8000:8000 amazon/dynamodb-local
+export AWS_ENDPOINT_URL=http://localhost:8000
+```
+
+### 환경 변수
+
+```bash
+# apps/back
+export GRPC_LISTEN_ADDR=:9090
+export OBS_LISTEN_ADDR=:9091
+export AWS_REGION=ap-northeast-1
+export AWS_PROFILE=seonology
+export DDB_ENDPOINT=http://localhost:8000  # 로컬용
+
+# apps/api
+export API_LISTEN_ADDR=:8080
+export BACK_GRPC_ADDR=localhost:9090
+export KEYCLOAK_URL=https://auth.seonology.com
+export KEYCLOAK_REALM=seonology-journey
+
+# apps/web
+export VITE_API_URL=http://localhost:8080
+export VITE_MAPBOX_TOKEN=<mapbox-token>
+```
+
+### 서비스 실행 순서
+
+```bash
+# 1. Proto 컴파일
+make proto
+
+# 2. Back (gRPC)
+cd apps/back && go run ./cmd/server/
+
+# 3. API (REST + WS)
+cd apps/api && go run ./cmd/server/
+
+# 4. Web (dev server)
+cd apps/web && pnpm dev
+
+# 5. Android
+cd apps/android && ./gradlew assembleDebug
+```
+
+### 테스트
+
 ```bash
 # back
 cd apps/back && go test ./... && go build ./...

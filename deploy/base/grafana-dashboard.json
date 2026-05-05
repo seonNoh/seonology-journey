@@ -1,0 +1,91 @@
+{
+  "annotations": { "list": [] },
+  "title": "Seonology Journey - RED + DDB + S3",
+  "uid": "journey-red-ddb-s3",
+  "panels": [
+    {
+      "title": "Request Rate (5m)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{namespace=\"seonology-journey\"}[5m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "title": "Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{namespace=\"seonology-journey\",code=~\"5..\"}[5m])) by (service) / sum(rate(http_requests_total{namespace=\"seonology-journey\"}[5m])) by (service)",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "title": "P95 Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"seonology-journey\"}[5m])) by (le, service))",
+          "legendFormat": "{{service}}"
+        }
+      ]
+    },
+    {
+      "title": "DynamoDB Consumed RCU/WCU",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(ddb_consumed_read_capacity_units_total[5m])) by (table)",
+          "legendFormat": "RCU {{table}}"
+        },
+        {
+          "expr": "sum(rate(ddb_consumed_write_capacity_units_total[5m])) by (table)",
+          "legendFormat": "WCU {{table}}"
+        }
+      ]
+    },
+    {
+      "title": "DDB Latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ddb_request_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}}"
+        }
+      ]
+    },
+    {
+      "title": "S3 Operations",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(rate(s3_operations_total[5m])) by (operation)",
+          "legendFormat": "{{operation}}"
+        }
+      ]
+    },
+    {
+      "title": "WebSocket Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 24 },
+      "targets": [{ "expr": "sum(ws_active_connections{namespace=\"seonology-journey\"})" }]
+    },
+    {
+      "title": "DDB Throttle Events",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 24 },
+      "targets": [{ "expr": "sum(increase(ddb_throttle_events_total[1h]))" }]
+    }
+  ],
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39
+}

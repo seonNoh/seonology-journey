@@ -147,6 +147,7 @@ func (p *StubPresigner) DownloadURL(_ context.Context, key string) (string, time
 type Service struct {
 	repo  Repository
 	pres  Presigner
+	store ObjectStore
 	now   func() time.Time
 	keyer func(tripID, mediaID, filename string) string
 }
@@ -161,6 +162,11 @@ func NewService(repo Repository, pres Presigner) *Service {
 			return fmt.Sprintf("trips/%s/%s/%s", tripID, mediaID, filename)
 		},
 	}
+}
+
+// SetObjectStore configures the S3 object store for post-processing (thumbnail, EXIF).
+func (s *Service) SetObjectStore(store ObjectStore) {
+	s.store = store
 }
 
 // GetUploadURL - presigned PUT URL 발급. media 메타는 confirm 시 저장.

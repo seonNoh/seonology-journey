@@ -16,7 +16,8 @@
         "ci",
         "chore",
         "release",
-        "deps"
+        "deps",
+        "all"
       ]
     ],
     "scope-empty": [2, "never"],

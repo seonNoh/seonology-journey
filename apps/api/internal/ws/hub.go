@@ -101,10 +101,18 @@ func (h *Hub) Handler(getUserID func(*http.Request) (string, error), getTripID f
 		c := &Client{conn: conn, tripID: tripID, userID: userID}
 		h.register(c)
 		defer h.unregister(c)
-		defer conn.Close(websocket.StatusNormalClosure, "")
+		defer conn.Close(websocket.StatusNormalClosure, "") //nolint:errcheck
 
 		ctx := r.Context()
-		// ping 루프.
+
+		// Idle timeout: disconnect if no message received within 60s.
+		idleTimeout := 60 * time.Second
+		timer := time.AfterFunc(idleTimeout, func() {
+			conn.Close(websocket.StatusPolicyViolation, "idle timeout") //nolint:errcheck
+		})
+		defer timer.Stop()
+
+		// ping loop.
 		go func() {
 			t := time.NewTicker(25 * time.Second)
 			defer t.Stop()
@@ -119,11 +127,66 @@ func (h *Hub) Handler(getUserID func(*http.Request) (string, error), getTripID f
 				}
 			}
 		}()
-		// 클라이언트로부터의 입력 수신 (현재는 무시).
+
+		// Read loop: parse incoming messages with type discriminator.
 		for {
-			if _, _, err := conn.Read(ctx); err != nil {
+			_, data, err := conn.Read(ctx)
+			if err != nil {
 				return
 			}
+			// Reset idle timer on any received message.
+			timer.Reset(idleTimeout)
+
+			var msg IncomingMessage
+			if err := json.Unmarshal(data, &msg); err != nil {
+				writeError(ctx, conn, "invalid message format")
+				continue
+			}
+
+			switch msg.Type {
+			case MsgTypePing:
+				pong, _ := json.Marshal(OutgoingMessage{Type: ServerMsgPong})
+				wctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				_ = conn.Write(wctx, websocket.MessageText, pong)
+				cancel()
+			case MsgTypeLocationUpdate:
+				h.handleLocation(ctx, c, msg.Payload)
+			default:
+				// Unknown types are silently ignored.
+			}
 		}
+	}
+}
+
+func writeError(ctx context.Context, conn *websocket.Conn, message string) {
+	payload, _ := json.Marshal(map[string]string{"message": message})
+	msg, _ := json.Marshal(OutgoingMessage{Type: ServerMsgError, Payload: payload})
+	wctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	_ = conn.Write(wctx, websocket.MessageText, msg)
+	cancel()
+}
+
+func (h *Hub) handleLocation(ctx context.Context, sender *Client, payload json.RawMessage) {
+	// Broadcast location to other clients in the same trip room.
+	outPayload, _ := json.Marshal(map[string]any{
+		"user_id": sender.userID,
+		"data":    payload,
+	})
+	msg, _ := json.Marshal(OutgoingMessage{Type: ServerMsgLocation, Payload: outPayload})
+
+	h.mu.RLock()
+	set := h.clients[sender.tripID]
+	clients := make([]*Client, 0, len(set))
+	for c := range set {
+		if c != sender {
+			clients = append(clients, c)
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, c := range clients {
+		wctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		_ = c.conn.Write(wctx, websocket.MessageText, msg)
+		cancel()
 	}
 }

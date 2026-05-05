@@ -1,14 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
-} from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import type {
@@ -87,7 +80,10 @@ export function ExpensesPage() {
 
   return (
     <section className="space-y-4">
-      <Link to={`/trips/${tripId}`} className="inline-flex items-center gap-1 text-sm text-sakura-700">
+      <Link
+        to={`/trips/${tripId}`}
+        className="inline-flex items-center gap-1 text-sm text-sakura-700"
+      >
         <ArrowLeft className="h-4 w-4" /> 여행 상세
       </Link>
       <div className="flex items-center justify-between">
@@ -128,12 +124,40 @@ export function ExpensesPage() {
               </ResponsiveContainer>
             </div>
           )}
+          {(summary.data.byDay?.length ?? 0) > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-slate-700 mb-2">일자별 합계</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-slate-500">
+                      <th className="py-1 pr-4">날짜</th>
+                      <th className="py-1 text-right">금액</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.data.byDay.map((d) => (
+                      <tr key={d.date} className="border-b border-slate-50">
+                        <td className="py-1.5 pr-4 text-slate-700">{d.date}</td>
+                        <td className="py-1.5 text-right font-medium text-slate-800">
+                          {d.total.amount} {d.total.currency}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <ul className="space-y-2">
         {list.data?.expenses?.map((e) => (
-          <li key={e.id} className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm">
+          <li
+            key={e.id}
+            className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm"
+          >
             <div>
               <p className="text-xs text-sakura-600">{CATEGORY_LABEL[e.category] ?? e.category}</p>
               <p className="font-bold text-slate-800">

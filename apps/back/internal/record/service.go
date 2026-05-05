@@ -87,12 +87,12 @@ func (r *ExpenseRepo) DeleteByTrip(_ context.Context, tripID string) error {
 
 // ExpenseService - 로직.
 type ExpenseService struct {
-	repo *ExpenseRepo
+	repo ExpenseRepository
 	now  func() time.Time
 }
 
 // NewExpenseService - 생성.
-func NewExpenseService(repo *ExpenseRepo) *ExpenseService {
+func NewExpenseService(repo ExpenseRepository) *ExpenseService {
 	return &ExpenseService{repo: repo, now: time.Now}
 }
 
@@ -270,12 +270,12 @@ func (r *NoteRepo) DeleteByTrip(_ context.Context, tripID string) error {
 
 // NoteService - 로직.
 type NoteService struct {
-	repo *NoteRepo
+	repo NoteRepository
 	now  func() time.Time
 }
 
 // NewNoteService - 생성.
-func NewNoteService(repo *NoteRepo) *NoteService {
+func NewNoteService(repo NoteRepository) *NoteService {
 	return &NoteService{repo: repo, now: time.Now}
 }
 
@@ -403,12 +403,12 @@ func (r *ChecklistRepo) DeleteByTrip(_ context.Context, tripID string) error {
 
 // ChecklistService - 로직.
 type ChecklistService struct {
-	repo *ChecklistRepo
+	repo ChecklistRepository
 	now  func() time.Time
 }
 
 // NewChecklistService - 생성.
-func NewChecklistService(repo *ChecklistRepo) *ChecklistService {
+func NewChecklistService(repo ChecklistRepository) *ChecklistService {
 	return &ChecklistService{repo: repo, now: time.Now}
 }
 
@@ -533,12 +533,12 @@ func (r *ReservationRepo) DeleteByTrip(_ context.Context, tripID string) error {
 
 // ReservationService - 로직.
 type ReservationService struct {
-	repo *ReservationRepo
+	repo ReservationRepository
 	now  func() time.Time
 }
 
 // NewReservationService - 생성.
-func NewReservationService(repo *ReservationRepo) *ReservationService {
+func NewReservationService(repo ReservationRepository) *ReservationService {
 	return &ReservationService{repo: repo, now: time.Now}
 }
 

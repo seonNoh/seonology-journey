@@ -26,26 +26,26 @@ type Deps struct {
 	Schedule      *schedule.Service
 	Meal          *meal.Service
 	Accommodation *accommodation.Service
-	ScheduleRepo  *schedule.MemoryRepo
-	MealRepo      *meal.MemoryRepo
-	AccommRepo    *accommodation.MemoryRepo
+	ScheduleRepo  schedule.Repository
+	MealRepo      meal.Repository
+	AccommRepo    accommodation.Repository
 
 	Expense         *record.ExpenseService
 	Note            *record.NoteService
 	Checklist       *record.ChecklistService
 	Reservation     *record.ReservationService
-	ExpenseRepo     *record.ExpenseRepo
-	NoteRepo        *record.NoteRepo
-	ChecklistRepo   *record.ChecklistRepo
-	ReservationRepo *record.ReservationRepo
+	ExpenseRepo     record.ExpenseRepository
+	NoteRepo        record.NoteRepository
+	ChecklistRepo   record.ChecklistRepository
+	ReservationRepo record.ReservationRepository
 
 	Companion     *social.CompanionService
 	Tag           *social.TagService
 	Template      *social.TemplateService
 	Favorite      *social.FavoriteService
 	Share         *social.ShareService
-	CompanionRepo *social.CompanionRepo
-	TagRepo       *social.TagRepo
+	CompanionRepo social.CompanionRepository
+	TagRepo       social.TagRepository
 
 	Media     *media.Service
 	MediaRepo media.Repository

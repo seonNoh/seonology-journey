@@ -36,6 +36,15 @@ spec:
     addVaryHeader: true
 ---
 apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: ws-timeout
+  namespace: seonology-journey
+spec:
+  inFlightReq:
+    amount: 200
+---
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: seonology-journey-api-https
@@ -44,7 +53,15 @@ spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`journey-api.seonology.com`)
+    - match: Host(`journey-api.seonology.com`) && PathPrefix(`/ws/`)
+      kind: Rule
+      services:
+        - name: seonology-journey-api
+          port: 8080
+      middlewares:
+        - name: api-cors
+        - name: ws-timeout
+    - match: Host(`journey-api.seonology.com`) && !PathPrefix(`/ws/`)
       kind: Rule
       services:
         - name: seonology-journey-api

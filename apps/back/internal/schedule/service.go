@@ -24,6 +24,7 @@ type Repository interface {
 	ListByDay(ctx context.Context, dayID string) ([]*journeyv1.Schedule, error)
 	Update(ctx context.Context, s *journeyv1.Schedule) error
 	Delete(ctx context.Context, id string) error
+	DeleteByDay(ctx context.Context, dayID string) error
 }
 
 // MemoryRepo - 메모리 Repository.

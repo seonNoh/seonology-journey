@@ -91,12 +91,12 @@ func (r *CompanionRepo) DeleteByTrip(_ context.Context, tripID string) error {
 
 // CompanionService - 로직.
 type CompanionService struct {
-	repo *CompanionRepo
+	repo CompanionRepository
 	now  func() time.Time
 }
 
 // NewCompanionService - 생성.
-func NewCompanionService(repo *CompanionRepo) *CompanionService {
+func NewCompanionService(repo CompanionRepository) *CompanionService {
 	return &CompanionService{repo: repo, now: time.Now}
 }
 
@@ -242,11 +242,11 @@ func (r *TagRepo) DetachAllFromTrip(_ context.Context, tripID string) error {
 
 // TagService - 로직.
 type TagService struct {
-	repo *TagRepo
+	repo TagRepository
 }
 
 // NewTagService - 생성.
-func NewTagService(repo *TagRepo) *TagService { return &TagService{repo: repo} }
+func NewTagService(repo TagRepository) *TagService { return &TagService{repo: repo} }
 
 // Create - 생성.
 func (s *TagService) Create(ctx context.Context, userID string, req *journeyv1.CreateTagRequest) (*journeyv1.Tag, error) {
@@ -336,12 +336,12 @@ func (r *TemplateRepo) Delete(_ context.Context, id string) error {
 
 // TemplateService - 로직.
 type TemplateService struct {
-	repo *TemplateRepo
+	repo TemplateRepository
 	now  func() time.Time
 }
 
 // NewTemplateService - 생성.
-func NewTemplateService(repo *TemplateRepo) *TemplateService {
+func NewTemplateService(repo TemplateRepository) *TemplateService {
 	return &TemplateService{repo: repo, now: time.Now}
 }
 
@@ -421,12 +421,12 @@ func (r *FavoriteRepo) Delete(_ context.Context, id string) error {
 
 // FavoriteService - 로직.
 type FavoriteService struct {
-	repo *FavoriteRepo
+	repo FavoriteRepository
 	now  func() time.Time
 }
 
 // NewFavoriteService - 생성.
-func NewFavoriteService(repo *FavoriteRepo) *FavoriteService {
+func NewFavoriteService(repo FavoriteRepository) *FavoriteService {
 	return &FavoriteService{repo: repo, now: time.Now}
 }
 
@@ -498,12 +498,12 @@ func (r *ShareRepo) Delete(_ context.Context, code string) error {
 
 // ShareService - 로직.
 type ShareService struct {
-	repo *ShareRepo
+	repo ShareRepository
 	now  func() time.Time
 }
 
 // NewShareService - 생성.
-func NewShareService(repo *ShareRepo) *ShareService {
+func NewShareService(repo ShareRepository) *ShareService {
 	return &ShareService{repo: repo, now: time.Now}
 }
 
