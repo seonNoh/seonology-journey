@@ -15,6 +15,7 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/api/internal/external"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/grpcclient"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/handler"
+	apimw "github.com/seonNoh/seonology-journey/apps/api/internal/middleware"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/ws"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
 	"google.golang.org/grpc/metadata"
@@ -49,6 +50,7 @@ func main() {
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
+	r.Use(apimw.StructuredLogger)
 	r.Use(corsMiddleware)
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {

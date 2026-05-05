@@ -12,6 +12,7 @@ resources:
   - api-ingressroute.yaml
   - servicemonitor.yaml
   - networkpolicy.yaml
+  - prometheusrule.yaml
 
 labels:
   - pairs:

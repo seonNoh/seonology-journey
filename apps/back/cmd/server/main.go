@@ -149,7 +149,11 @@ func main() {
 	}
 	journey := server.NewJourneyServer(deps)
 
-	srv := grpc.NewServer()
+	srv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			observability.LoggingUnaryInterceptor(logger),
+		),
+	)
 	journeyv1.RegisterJourneyServiceServer(srv, journey)
 	healthgrpc.RegisterHealthServer(srv, health.NewServer())
 	reflection.Register(srv)

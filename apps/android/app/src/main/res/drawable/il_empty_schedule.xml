@@ -1,0 +1,59 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="160dp"
+    android:viewportWidth="200"
+    android:viewportHeight="160">
+
+    <!-- Calendar body -->
+    <path
+        android:pathData="M58,40 L142,40 C146.42,40 150,43.58 150,48 L150,112 C150,116.42 146.42,120 142,120 L58,120 C53.58,120 50,116.42 50,112 L50,48 C50,43.58 53.58,40 58,40 Z"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="2"
+        android:fillColor="#f1f5f9" />
+
+    <!-- Calendar divider -->
+    <path
+        android:pathData="M50,60 L150,60"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="2" />
+
+    <!-- Calendar pins -->
+    <path
+        android:pathData="M70,50 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0"
+        android:fillColor="#94a3b8" />
+    <path
+        android:pathData="M130,50 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0"
+        android:fillColor="#94a3b8" />
+
+    <!-- Empty rows -->
+    <path
+        android:pathData="M60,70 L90,70 C91.66,70 93,71.34 93,73 C93,74.66 91.66,76 90,76 L60,76 C58.34,76 57,74.66 57,73 C57,71.34 58.34,70 60,70 Z"
+        android:fillColor="#e2e8f0" />
+    <path
+        android:pathData="M60,85 L110,85 C111.66,85 113,86.34 113,88 C113,89.66 111.66,91 110,91 L60,91 C58.34,91 57,89.66 57,88 C57,86.34 58.34,85 60,85 Z"
+        android:fillColor="#e2e8f0" />
+    <path
+        android:pathData="M60,100 L100,100 C101.66,100 103,101.34 103,103 C103,104.66 101.66,106 100,106 L60,106 C58.34,106 57,104.66 57,103 C57,101.34 58.34,100 60,100 Z"
+        android:fillColor="#e2e8f0" />
+
+    <!-- Add circle (dashed) -->
+    <path
+        android:pathData="M130,95 m-15,0 a15,15 0 1,1 30,0 a15,15 0 1,1 -30,0"
+        android:strokeColor="#cbd5e1"
+        android:strokeWidth="1.5"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Plus vertical -->
+    <path
+        android:pathData="M130,88 L130,102"
+        android:strokeColor="#cbd5e1"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- Plus horizontal -->
+    <path
+        android:pathData="M123,95 L137,95"
+        android:strokeColor="#cbd5e1"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,0 +1,71 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: seonology-journey-alerts
+  namespace: seonology-journey
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/part-of: seonology-journey
+spec:
+  groups:
+    - name: seonology-journey.rules
+      rules:
+        - alert: JourneyHighErrorRate
+          expr: |
+            (
+              sum(rate(grpc_server_handled_total{grpc_code!="OK",namespace="seonology-journey"}[5m]))
+              /
+              sum(rate(grpc_server_handled_total{namespace="seonology-journey"}[5m]))
+            ) > 0.05
+          for: 3m
+          labels:
+            severity: warning
+            team: seonology
+          annotations:
+            summary: 'Journey 5xx error rate > 5%'
+            description: 'namespace=seonology-journey error rate {{ $value | humanizePercentage }} over 5min'
+
+        - alert: JourneyHighP95Latency
+          expr: |
+            histogram_quantile(0.95, sum(rate(grpc_server_handling_seconds_bucket{namespace="seonology-journey"}[5m])) by (le))
+            > 2.0
+          for: 5m
+          labels:
+            severity: warning
+            team: seonology
+          annotations:
+            summary: 'Journey p95 latency > 2s'
+            description: 'p95 latency is {{ $value }}s'
+
+        - alert: JourneyDynamoDBThrottle
+          expr: |
+            sum(rate(aws_dynamodb_throttled_requests_total{namespace="seonology-journey"}[5m])) > 0
+          for: 2m
+          labels:
+            severity: critical
+            team: seonology
+          annotations:
+            summary: 'DynamoDB throttle detected'
+            description: 'Throttled requests: {{ $value }}/s'
+
+        - alert: JourneyErrorLogSpike
+          expr: |
+            sum(rate({namespace="seonology-journey"} |= "level=error" [5m])) > 5
+          for: 3m
+          labels:
+            severity: warning
+            team: seonology
+          annotations:
+            summary: 'Error log spike in seonology-journey'
+            description: 'Error logs: {{ $value }}/s'
+
+        - alert: JourneyPodRestart
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="seonology-journey"}[15m]) > 3
+          for: 1m
+          labels:
+            severity: critical
+            team: seonology
+          annotations:
+            summary: 'Pod restart storm'
+            description: '{{ $labels.pod }} restarted {{ $value }} times in 15m'

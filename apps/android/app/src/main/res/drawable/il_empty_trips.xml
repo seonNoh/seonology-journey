@@ -1,0 +1,52 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="160dp"
+    android:viewportWidth="200"
+    android:viewportHeight="160">
+
+    <!-- Suitcase body -->
+    <path
+        android:pathData="M68,50 L132,50 C136.42,50 140,53.58 140,58 L140,102 C140,106.42 136.42,110 132,110 L68,110 C63.58,110 60,106.42 60,102 L60,58 C60,53.58 63.58,50 68,50 Z"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="2"
+        android:fillColor="#f1f5f9" />
+
+    <!-- Suitcase handle -->
+    <path
+        android:pathData="M79,40 L121,40 C123.21,40 125,41.79 125,44 L125,50 C125,52.21 123.21,54 121,54 L79,54 C76.79,54 75,52.21 75,50 L75,44 C75,41.79 76.79,40 79,40 Z"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="2"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Cross vertical -->
+    <path
+        android:pathData="M100,70 L100,90"
+        android:strokeColor="#cbd5e1"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- Cross horizontal -->
+    <path
+        android:pathData="M90,80 L110,80"
+        android:strokeColor="#cbd5e1"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+
+    <!-- Ground -->
+    <path
+        android:pathData="M50,120 C50,116.69 72.39,114 100,114 C127.61,114 150,116.69 150,120 C150,123.31 127.61,126 100,126 C72.39,126 50,123.31 50,120 Z"
+        android:fillColor="#e2e8f0" />
+
+    <!-- Plane trail -->
+    <path
+        android:pathData="M30,30 Q60,20 80,35"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="1.5"
+        android:fillColor="@android:color/transparent"
+        android:strokeLineCap="round" />
+
+    <!-- Plane -->
+    <path
+        android:pathData="M25,32 L33,29 L31,34 Z"
+        android:fillColor="#64748b" />
+</vector>

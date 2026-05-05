@@ -6,14 +6,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth()
   return (
     <div className="min-h-screen bg-gradient-to-b from-sakura-50 to-white">
-      <header className="border-b border-sakura-100 bg-white/80 backdrop-blur sticky top-0 z-10">
+      <header
+        className="border-b border-sakura-100 bg-white/80 backdrop-blur sticky top-0 z-10"
+        role="banner"
+      >
         <div className="mx-auto max-w-5xl flex items-center gap-3 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2 text-sakura-700 font-bold">
-            <Plane className="h-5 w-5" />
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-sakura-700 font-bold"
+            aria-label="Seonology Journey Home"
+          >
+            <Plane className="h-5 w-5" aria-hidden="true" />
             Seonology Journey
           </Link>
-          <nav className="flex-1 flex items-center gap-4 text-sm text-slate-700">
-            <Link to="/trips" className="hover:text-sakura-600">여행</Link>
+          <nav
+            className="flex-1 flex items-center gap-4 text-sm text-slate-700"
+            aria-label="Main navigation"
+          >
+            <Link to="/trips" className="hover:text-sakura-600">
+              여행
+            </Link>
           </nav>
           <div className="flex items-center gap-2 text-sm">
             {auth.authenticated ? (
@@ -40,7 +52,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      <main id="main-content" className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   )
 }
