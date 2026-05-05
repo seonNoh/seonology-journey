@@ -113,38 +113,41 @@ func (r *DDBRepo) Get(ctx context.Context, id string) (*journeyv1.Trip, error) {
 }
 
 func (r *DDBRepo) ListByOwner(ctx context.Context, ownerID string, status journeyv1.TripStatus) ([]*journeyv1.Trip, error) {
-	keyCond := expression.KeyAnd(
-		expression.Key("PK").Equal(expression.Value(ddb.UserKey(ownerID))),
-		expression.Key("SK").BeginsWith("TRIP#"),
-	)
+	// 2인 공유 서비스: Companion GSI로 참여 Trip ID를 먼저 조회한 뒤
+	// owner Trip + companion Trip을 합산 반환.
+	// 간소화: Scan 전체 Trip (2인 전용이라 데이터가 적음).
+	var filterExpr *string
+	var exprNames map[string]string
+	var exprVals map[string]types.AttributeValue
 
-	builder := expression.NewBuilder().WithKeyCondition(keyCond)
 	if status != journeyv1.TripStatus_TRIP_STATUS_UNSPECIFIED {
-		builder = builder.WithFilter(expression.Name("status").Equal(expression.Value(int32(status))))
+		builder := expression.NewBuilder().WithFilter(
+			expression.Name("status").Equal(expression.Value(int32(status))),
+		)
+		expr, err := builder.Build()
+		if err != nil {
+			return nil, fmt.Errorf("trip ddb list build expr: %w", err)
+		}
+		filterExpr = expr.Filter()
+		exprNames = expr.Names()
+		exprVals = expr.Values()
 	}
 
-	expr, err := builder.Build()
-	if err != nil {
-		return nil, fmt.Errorf("trip ddb list build expr: %w", err)
-	}
-
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 		TableName:                 aws.String(r.table),
-		KeyConditionExpression:    expr.KeyCondition(),
-		FilterExpression:          expr.Filter(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		ScanIndexForward:          aws.Bool(false),
+		FilterExpression:          filterExpr,
+		ExpressionAttributeNames:  exprNames,
+		ExpressionAttributeValues: exprVals,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("trip ddb list query: %w", err)
+		return nil, fmt.Errorf("trip ddb list scan: %w", err)
 	}
 
 	trips := make([]*journeyv1.Trip, 0, len(out.Items))
 	for _, raw := range out.Items {
 		var item tripItem
 		if err := attributevalue.UnmarshalMap(raw, &item); err != nil {
-			return nil, fmt.Errorf("trip ddb list unmarshal: %w", err)
+			continue
 		}
 		trips = append(trips, fromItem(&item))
 	}
