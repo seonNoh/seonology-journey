@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- XML-side color palette. Compose 쪽의 Color.kt 와 값을 맞춘다
+     (#FFF5F7 = Sakura50). res 리소스만 볼 수 있는 시스템 UI 에서도
+     일관된 테마가 보이도록 여기에 별도 정의. -->
+<resources>
+    <color name="sakura_50">#FFFFF5F7</color>
+    <color name="sakura_500">#FFF25C7A</color>
+</resources>
