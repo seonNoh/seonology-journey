@@ -109,3 +109,21 @@ jobs:
           for f in apps/android/app/build/outputs/apk/release/*.apk apps/android/app/build/outputs/bundle/release/*.aab; do
             [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
           done
+
+      # Firebase App Distribution: 테스터 그룹 internal 에 APK 배포.
+      # FIREBASE_APP_ID / FIREBASE_SERVICE_ACCOUNT_KEY 시크릿이 없으면
+      # 액션이 빈 문자열을 받아 실패한다. continue-on-error 로 감싸서
+      # 릴리즈 전체가 깨지는 걸 막는다 (APK 는 이미 GitHub Release 에
+      # 첨부된 상태이므로 이 스텝 실패는 치명적이지 않다).
+      - name: upload apk to Firebase App Distribution
+        if: steps.semrel.outputs.released == 'true' && matrix.app == 'android'
+        continue-on-error: true
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          groups: internal
+          file: apps/android/app/build/outputs/apk/release/app-release.apk
+          releaseNotes: |
+            android-v${{ steps.semrel.outputs.version }}
+            ${{ github.event.head_commit.message }}

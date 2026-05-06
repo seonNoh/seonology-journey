@@ -29,6 +29,10 @@ Thumbs.db
 secrets.yaml
 **/secrets.yaml
 !**/secrets.yaml.example
+# Firebase service account JSON (absolutely never commit)
+**/firebase-service-account*.json
+**/*-service-account*.json
+**/*-adminsdk-*.json
 
 # Logs
 *.log
