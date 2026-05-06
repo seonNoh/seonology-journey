@@ -1,6 +1,7 @@
 package com.seonology.journey.ui
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -451,7 +452,15 @@ private fun TripListScreen(
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         item { NextTripHeroCard(upcoming, onClick = { onOpenTrip(upcoming.id) }) }
-                        item { QuickActionRow() }
+                        item {
+                            QuickActionRow(
+                                onCreateTrip = { /* 새 여행 생성은 웹에서 처리 */ },
+                                onSchedule = { onOpenTrip(upcoming.id) },
+                                onMap = { /* 지도 탭은 추후 */ },
+                                onPhotos = { /* 사진 탭은 추후 */ },
+                                onNotes = { onOpenTrip(upcoming.id) },
+                            )
+                        }
                         item {
                             SbSection(
                                 title = "다가오는 여행",
@@ -600,12 +609,22 @@ private fun NextTripHeroCard(trip: Trip, onClick: () -> Unit) {
 }
 
 @Composable
-private fun QuickActionRow() {
+private fun QuickActionRow(
+    onCreateTrip: () -> Unit,
+    onSchedule: () -> Unit,
+    onMap: () -> Unit,
+    onPhotos: () -> Unit,
+    onNotes: () -> Unit,
+) {
+    val context = LocalContext.current
+    val notReady: () -> Unit = remember(context) {
+        { Toast.makeText(context, "준비 중인 기능이에요", Toast.LENGTH_SHORT).show() }
+    }
     val actions = listOf(
-        QuickAction("일정", Icons.Default.CalendarMonth),
-        QuickAction("지도", Icons.Default.Place),
-        QuickAction("사진", Icons.Default.CameraAlt),
-        QuickAction("메모", Icons.Default.Note),
+        QuickAction("일정", Icons.Default.CalendarMonth, onSchedule),
+        QuickAction("지도", Icons.Default.Place) { onMap(); notReady() },
+        QuickAction("사진", Icons.Default.CameraAlt) { onPhotos(); notReady() },
+        QuickAction("메모", Icons.Default.Note, onNotes),
     )
     Row(
         modifier = Modifier
@@ -619,6 +638,10 @@ private fun QuickActionRow() {
             modifier = Modifier
                 .clip(RoundedCornerShape(99.dp))
                 .background(Sakura500)
+                .clickable {
+                    onCreateTrip()
+                    notReady()
+                }
                 .padding(horizontal = 14.dp, vertical = 8.dp),
         ) {
             Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -632,6 +655,7 @@ private fun QuickActionRow() {
                     .clip(RoundedCornerShape(99.dp))
                     .background(Color.White)
                     .border(1.dp, Sakura100, RoundedCornerShape(99.dp))
+                    .clickable(onClick = a.onClick)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Icon(a.icon, contentDescription = null, tint = Sakura600, modifier = Modifier.size(14.dp))
@@ -642,7 +666,11 @@ private fun QuickActionRow() {
     }
 }
 
-private data class QuickAction(val label: String, val icon: ImageVector)
+private data class QuickAction(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
 
 @Composable
 private fun TripRow(trip: Trip, indexHint: Int, onClick: () -> Unit) {
@@ -756,19 +784,13 @@ private fun TripDetailScreen(
             ) {
                 trip?.let { TripHeroHeader(it) }
                 TripPrepStrip()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.base),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    SubNavCard("메모", "기록 보기", Icons.Default.Note, modifier = Modifier.weight(1f)) {
-                        onOpenNotes(tripId)
-                    }
-                    SubNavCard("지출", "기록 보기", Icons.Default.Wallet, modifier = Modifier.weight(1f)) {
-                        onOpenExpenses(tripId)
-                    }
-                }
+                TripDetailNavRow(
+                    onSchedule = { /* 같은 화면의 일정 섹션을 노출 — 별도 동작 없음 */ },
+                    onMap = { /* 지도 탭은 추후 */ },
+                    onPhotos = { /* 사진 탭은 추후 */ },
+                    onNotes = { onOpenNotes(tripId) },
+                    onExpenses = { onOpenExpenses(tripId) },
+                )
                 SbSection(title = "일정", icon = Icons.Default.CalendarMonth, count = "${days.size}일")
                 if (days.isEmpty()) {
                     EmptyCard("등록된 일정이 없습니다.")
@@ -888,39 +910,50 @@ private fun TripPrepStrip() {
     }
 }
 
+/**
+ * 여행 상세 화면 상단의 가로 스크롤 탭 행. 일정/지도/사진/메모/지출 5개 탭을
+ * 칩 모양으로 노출한다. 미구현 탭(지도/사진)은 Toast로 안내한다.
+ */
 @Composable
-private fun SubNavCard(
-    label: String,
-    subtitle: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+private fun TripDetailNavRow(
+    onSchedule: () -> Unit,
+    onMap: () -> Unit,
+    onPhotos: () -> Unit,
+    onNotes: () -> Unit,
+    onExpenses: () -> Unit,
 ) {
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Sakura50),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, Sakura100),
-        modifier = modifier.height(72.dp),
+    val context = LocalContext.current
+    val notReady: () -> Unit = remember(context) {
+        { Toast.makeText(context, "준비 중인 기능이에요", Toast.LENGTH_SHORT).show() }
+    }
+    data class Tab(val label: String, val icon: ImageVector, val onClick: () -> Unit)
+    val tabs = listOf(
+        Tab("일정", Icons.Default.CalendarMonth, onSchedule),
+        Tab("지도", Icons.Default.Place) { onMap(); notReady() },
+        Tab("사진", Icons.Default.CameraAlt) { onPhotos(); notReady() },
+        Tab("메모", Icons.Default.Note, onNotes),
+        Tab("지출", Icons.Default.Wallet, onExpenses),
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = Spacing.base),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Row(
-            modifier = Modifier.padding(Spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
+        tabs.forEach { t ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White),
-                contentAlignment = Alignment.Center,
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(Color.White)
+                    .border(1.dp, Sakura100, RoundedCornerShape(99.dp))
+                    .clickable(onClick = t.onClick)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
             ) {
-                Icon(icon, contentDescription = null, tint = Sakura600, modifier = Modifier.size(18.dp))
-            }
-            Spacer(Modifier.width(Spacing.sm))
-            Column {
-                Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Sakura900)
-                Text(subtitle, fontSize = 10.sp, color = Warm500)
+                Icon(t.icon, contentDescription = null, tint = Sakura600, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(t.label, color = Sakura700, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
