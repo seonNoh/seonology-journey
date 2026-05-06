@@ -6,10 +6,10 @@
 
     <application
         android:label="Journey"
-        android:icon="@android:drawable/ic_dialog_map"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.Journey"
-        android:allowBackup="false"
-        tools:ignore="MissingApplicationIcon">
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

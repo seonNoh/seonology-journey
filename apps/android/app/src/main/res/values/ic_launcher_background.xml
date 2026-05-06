@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon background color. Sakura pink to match the app theme. -->
+<resources>
+    <color name="ic_launcher_background">#F25C7A</color>
+</resources>

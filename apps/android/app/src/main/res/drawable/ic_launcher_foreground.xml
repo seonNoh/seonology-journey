@@ -1,0 +1,65 @@
+<!-- Foreground layer of the adaptive launcher icon.
+     Simple sakura petal silhouette. 108dp canvas, 72dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 5-petal sakura centered at (54, 54) -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,28
+                c4,6 8,12 8,18
+                c0,6 -4,10 -8,14
+                c-4,-4 -8,-8 -8,-14
+                c0,-6 4,-12 8,-18z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,28
+                c4,6 8,12 8,18
+                c0,6 -4,10 -8,14
+                c-4,-4 -8,-8 -8,-14
+                c0,-6 4,-12 8,-18z"
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="72" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,28
+                c4,6 8,12 8,18
+                c0,6 -4,10 -8,14
+                c-4,-4 -8,-8 -8,-14
+                c0,-6 4,-12 8,-18z"
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="144" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,28
+                c4,6 8,12 8,18
+                c0,6 -4,10 -8,14
+                c-4,-4 -8,-8 -8,-14
+                c0,-6 4,-12 8,-18z"
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="216" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M54,28
+                c4,6 8,12 8,18
+                c0,6 -4,10 -8,14
+                c-4,-4 -8,-8 -8,-14
+                c0,-6 4,-12 8,-18z"
+            android:pivotX="54"
+            android:pivotY="54"
+            android:rotation="288" />
+        <!-- center dot -->
+        <path
+            android:fillColor="#FFFFD5E0"
+            android:pathData="M54,50 a4,4 0 1,0 0.1,0 z" />
+    </group>
+</vector>
