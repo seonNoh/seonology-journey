@@ -73,6 +73,7 @@ jobs:
 
       - name: tag docker image with semver
         if: steps.semrel.outputs.released == 'true' && matrix.image != ''
+        id: image
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -82,6 +83,62 @@ jobs:
           docker buildx imagetools create \
             --tag ${image_lc}:${{ steps.semrel.outputs.version }} \
             ${image_lc}:latest
+          echo "image_lc=${image_lc}" >> "$GITHUB_OUTPUT"
+          echo "tagged ${image_lc}:${{ steps.semrel.outputs.version }}"
+
+      - name: bump kustomize image tag and push
+        if: >-
+          steps.semrel.outputs.released == 'true' &&
+          matrix.image != '' &&
+          matrix.app != 'android'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_LC: ${{ steps.image.outputs.image_lc }}
+          VERSION: ${{ steps.semrel.outputs.version }}
+          APP: ${{ matrix.app }}
+        run: |
+          set -euo pipefail
+          # kustomize CLI 는 runner 에 없으므로 즉석 설치. kustomize edit set
+          # image 가 deploy/overlays/production/kustomization.yaml 의 해당
+          # 이미지 newTag 만 치환해주므로 sed/python 으로 수동 파싱하는 것보다
+          # 안전하다.
+          curl -sfL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash -s -- 5.4.3
+          chmod +x kustomize
+          sudo mv kustomize /usr/local/bin/kustomize
+          kustomize version
+
+          # 다른 매트릭스 잡이 동시에 같은 파일을 고치려 하므로 rebase-retry 루프.
+          # ArgoCD 가 kustomize image 블록의 newTag 변경을 drift 로 감지해
+          # automated sync 로 파드를 롤링 재배포한다.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          attempt=0
+          while [ $attempt -lt 5 ]; do
+            attempt=$((attempt + 1))
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+
+            (cd deploy/overlays/production && kustomize edit set image "${IMAGE_LC}=${IMAGE_LC}:${VERSION}")
+
+            if git diff --quiet deploy/overlays/production/kustomization.yaml; then
+              echo "no kustomize change for ${APP}; skipping commit"
+              exit 0
+            fi
+
+            git add deploy/overlays/production/kustomization.yaml
+            git commit -m "chore(deploy): bump ${APP} image to ${VERSION} [skip ci]" --no-verify
+            if git push origin main; then
+              echo "pushed kustomize bump for ${APP} v${VERSION}"
+              exit 0
+            else
+              echo "push rejected; retrying (attempt ${attempt})"
+              sleep 3
+            fi
+          done
+          echo "failed to push kustomize bump after 5 attempts" >&2
+          exit 1
 
       - name: setup java for android
         if: steps.semrel.outputs.released == 'true' && matrix.app == 'android'

@@ -12,7 +12,11 @@
           { "scope": "android", "type": "perf", "release": "patch" },
           { "scope": "android", "type": "refactor", "release": "patch" },
           { "scope": "android", "breaking": true, "release": "major" },
-          { "scope": "!android", "release": false }
+          { "scope": "all", "type": "feat", "release": "minor" },
+          { "scope": "all", "type": "fix", "release": "patch" },
+          { "scope": "all", "type": "perf", "release": "patch" },
+          { "scope": "all", "type": "refactor", "release": "patch" },
+          { "scope": "all", "breaking": true, "release": "major" }
         ]
       }
     ],

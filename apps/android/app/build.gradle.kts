@@ -102,4 +102,5 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.work.runtime.ktx)
+    implementation(libs.play.services.location)
 }

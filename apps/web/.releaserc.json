@@ -12,17 +12,15 @@
           { "scope": "web", "type": "perf", "release": "patch" },
           { "scope": "web", "type": "refactor", "release": "patch" },
           { "scope": "web", "breaking": true, "release": "major" },
-          { "scope": "!web", "release": false }
+          { "scope": "all", "type": "feat", "release": "minor" },
+          { "scope": "all", "type": "fix", "release": "patch" },
+          { "scope": "all", "type": "perf", "release": "patch" },
+          { "scope": "all", "type": "refactor", "release": "patch" },
+          { "scope": "all", "breaking": true, "release": "major" }
         ]
       }
     ],
-    [
-      "@semantic-release/release-notes-generator",
-      { "preset": "conventionalcommits" }
-    ],
-    [
-      "@semantic-release/github",
-      { "successComment": false, "failTitle": false, "labels": false }
-    ]
+    ["@semantic-release/release-notes-generator", { "preset": "conventionalcommits" }],
+    ["@semantic-release/github", { "successComment": false, "failTitle": false, "labels": false }]
   ]
 }
