@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type { ListNotesResponse, Note } from '../lib/types'
 
 export function NotesPage() {
@@ -75,6 +76,7 @@ export function NotesPage() {
       </form>
 
       <ul className="space-y-2">
+        {list.isLoading && !list.data && <ListRowsSkeleton message="메모를 펼치고 있어요" />}
         {list.data?.notes?.map((n) => (
           <li
             key={n.id}

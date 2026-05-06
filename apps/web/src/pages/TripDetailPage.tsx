@@ -18,6 +18,7 @@ import {
 import { api } from '../lib/api'
 import { Modal } from '../components/Modal'
 import type { Day, ListDaysResponse, Trip } from '../lib/types'
+import { TripDetailSkeleton, ListRowsSkeleton } from '../components/LoadingPlaceholders'
 
 export function TripDetailPage() {
   const { tripId = '' } = useParams()
@@ -66,7 +67,7 @@ export function TripDetailPage() {
       <Link to="/trips" className="inline-flex items-center gap-1 text-sm text-sakura-700">
         <ArrowLeft className="h-4 w-4" /> 목록으로
       </Link>
-      {trip.isLoading && <p>불러오는 중…</p>}
+      {trip.isLoading && !trip.data && <TripDetailSkeleton />}
       {trip.error && <p className="text-red-500">{(trip.error as Error).message}</p>}
       {trip.data && (
         <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -130,6 +131,7 @@ export function TripDetailPage() {
         </button>
       </div>
       <ul className="space-y-2">
+        {days.isLoading && !days.data && <ListRowsSkeleton message="일정을 가져오는 중이에요" />}
         {days.data?.days?.map((d: Day) => (
           <li key={d.id}>
             <Link

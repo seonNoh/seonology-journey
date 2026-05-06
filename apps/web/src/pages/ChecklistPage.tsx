@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, Check } from 'lucide-react'
 import { api } from '../lib/api'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type { ChecklistCategory, ChecklistItem, ListChecklistResponse } from '../lib/types'
 
 const CAT_LABEL: Record<ChecklistCategory, string> = {
@@ -101,6 +102,9 @@ export function ChecklistPage() {
         </button>
       </form>
 
+      {list.isLoading && !list.data && (
+        <ListRowsSkeleton message="체크리스트를 가져오는 중이에요" />
+      )}
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} className="space-y-2">
           <h2 className="text-sm font-bold text-slate-600">
@@ -108,10 +112,7 @@ export function ChecklistPage() {
           </h2>
           <ul className="space-y-1">
             {items.map((it) => (
-              <li
-                key={it.id}
-                className="flex items-center gap-2 rounded-xl bg-white p-3 shadow-sm"
-              >
+              <li key={it.id} className="flex items-center gap-2 rounded-xl bg-white p-3 shadow-sm">
                 <button
                   onClick={() => toggleMut.mutate(it)}
                   className={

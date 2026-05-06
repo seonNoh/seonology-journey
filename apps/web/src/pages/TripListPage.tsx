@@ -5,6 +5,8 @@ import { Plus, MapPin, CalendarDays } from 'lucide-react'
 import { api } from '../lib/api'
 import type { CreateTripInput, ListTripsResponse, Trip } from '../lib/types'
 import { useAuth } from '../hooks/useAuth'
+import { CuteLoaderBlock } from '../components/CuteLoader'
+import { TripListSkeleton } from '../components/LoadingPlaceholders'
 
 export function TripListPage() {
   const auth = useAuth()
@@ -19,13 +21,38 @@ export function TripListPage() {
 
   const createMut = useMutation({
     mutationFn: (input: CreateTripInput) => api.post<{ trip: Trip }>('/trips', input),
-    onSuccess: () => {
+    // Optimistic UI: stub 하나를 캐시에 먼저 꽂아두고 서버 응답으로 교체한다.
+    // 서버가 id 를 만들어 주므로 임시 id 를 쓴 뒤 onSuccess 에서 invalidate.
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ['trips'] })
+      const prev = qc.getQueryData<ListTripsResponse>(['trips'])
+      const optimistic: Trip = {
+        id: `tmp-${Date.now()}`,
+        ownerId: 'me',
+        title: input.title,
+        description: input.description,
+        destination: input.destination,
+        countryCode: input.countryCode,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        totalBudget: input.totalBudget,
+        status: 'TRIP_STATUS_PLANNING',
+      }
+      qc.setQueryData<ListTripsResponse>(['trips'], (old) => ({
+        trips: [optimistic, ...(old?.trips ?? [])],
+      }))
+      return { prev }
+    },
+    onError: (_err, _input, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['trips'], ctx.prev)
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['trips'] })
       setOpen(false)
     },
   })
 
-  if (!auth.ready) return <p className="text-slate-500">읽는 중…</p>
+  if (!auth.ready) return <CuteLoaderBlock message="로그인 정보를 확인하고 있어요" />
   if (!auth.authenticated)
     return (
       <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
@@ -51,7 +78,7 @@ export function TripListPage() {
         </button>
       </div>
 
-      {isLoading && <p className="text-slate-500">불러오는 중…</p>}
+      {isLoading && !data && <TripListSkeleton />}
       {error && <p className="text-red-500">{(error as Error).message}</p>}
 
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">

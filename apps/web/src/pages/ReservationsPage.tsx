@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, Ticket } from 'lucide-react'
 import { api } from '../lib/api'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type {
   CreateReservationInput,
   ListReservationsResponse,
@@ -35,14 +36,12 @@ export function ReservationsPage() {
 
   const list = useQuery({
     queryKey: ['reservations', tripId],
-    queryFn: () =>
-      api.get<ListReservationsResponse>(`/trips/${tripId}/reservations`),
+    queryFn: () => api.get<ListReservationsResponse>(`/trips/${tripId}/reservations`),
     enabled: !!tripId,
   })
 
   const createMut = useMutation({
-    mutationFn: (input: CreateReservationInput) =>
-      api.post(`/trips/${tripId}/reservations`, input),
+    mutationFn: (input: CreateReservationInput) => api.post(`/trips/${tripId}/reservations`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reservations', tripId] })
       setOpen(false)
@@ -76,16 +75,12 @@ export function ReservationsPage() {
         </button>
       </div>
 
-      {list.isLoading && <p>불러오는 중…</p>}
+      {list.isLoading && !list.data && <ListRowsSkeleton message="예약을 확인하고 있어요" />}
       {list.error && <p className="text-red-500">{(list.error as Error).message}</p>}
 
       <ul className="space-y-2">
         {items.map((r) => (
-          <ReservationCard
-            key={r.id}
-            r={r}
-            onDelete={() => deleteMut.mutate(r.id)}
-          />
+          <ReservationCard key={r.id} r={r} onDelete={() => deleteMut.mutate(r.id)} />
         ))}
         {items.length === 0 && !list.isLoading && (
           <li className="rounded-xl bg-white p-6 text-center text-slate-500 shadow-sm">
@@ -111,13 +106,9 @@ function ReservationCard({ r, onDelete }: { r: Reservation; onDelete: () => void
       <div className="flex-1">
         <p className="text-xs text-slate-500">{TYPE_LABEL[r.type]}</p>
         <p className="font-bold text-slate-800">{r.vendor ?? '(공급자 없음)'}</p>
-        {r.confirmNumber && (
-          <p className="text-xs text-slate-500">예약번호 {r.confirmNumber}</p>
-        )}
+        {r.confirmNumber && <p className="text-xs text-slate-500">예약번호 {r.confirmNumber}</p>}
         {r.reservedAt && (
-          <p className="text-xs text-slate-500">
-            {new Date(r.reservedAt).toLocaleString()}
-          </p>
+          <p className="text-xs text-slate-500">{new Date(r.reservedAt).toLocaleString()}</p>
         )}
         {r.cost?.amount ? (
           <p className="mt-1 text-sm text-sakura-600">
@@ -170,9 +161,7 @@ function CreateReservationModal({
               type: form.type,
               vendor: form.vendor || undefined,
               confirmNumber: form.confirmNumber || undefined,
-              reservedAt: form.reservedAt
-                ? new Date(form.reservedAt).toISOString()
-                : undefined,
+              reservedAt: form.reservedAt ? new Date(form.reservedAt).toISOString() : undefined,
               notes: form.notes || undefined,
               cost,
             })
@@ -182,9 +171,7 @@ function CreateReservationModal({
             <span className="text-sm text-slate-700">유형</span>
             <select
               value={form.type}
-              onChange={(e) =>
-                setForm({ ...form, type: e.target.value as ReservationType })
-              }
+              onChange={(e) => setForm({ ...form, type: e.target.value as ReservationType })}
               className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2"
             >
               {TYPES.map((t) => (
@@ -223,11 +210,7 @@ function CreateReservationModal({
               onChange={(v) => setForm({ ...form, costCurrency: v })}
             />
           </div>
-          <Field
-            label="메모"
-            value={form.notes}
-            onChange={(v) => setForm({ ...form, notes: v })}
-          />
+          <Field label="메모" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} />
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="rounded-md border px-3 py-1.5">
               취소

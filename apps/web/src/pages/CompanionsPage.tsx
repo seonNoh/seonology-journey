@@ -3,10 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, Users } from 'lucide-react'
 import { api } from '../lib/api'
-import type {
-  CompanionRole,
-  ListCompanionsResponse,
-} from '../lib/types'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
+import type { CompanionRole, ListCompanionsResponse } from '../lib/types'
 
 const ROLE_LABEL: Record<CompanionRole, string> = {
   COMPANION_ROLE_UNSPECIFIED: '미지정',
@@ -15,10 +13,7 @@ const ROLE_LABEL: Record<CompanionRole, string> = {
   COMPANION_ROLE_VIEWER: '뷰어',
 }
 
-const ROLES: CompanionRole[] = [
-  'COMPANION_ROLE_EDITOR',
-  'COMPANION_ROLE_VIEWER',
-]
+const ROLES: CompanionRole[] = ['COMPANION_ROLE_EDITOR', 'COMPANION_ROLE_VIEWER']
 
 export function CompanionsPage() {
   const { tripId = '' } = useParams()
@@ -28,8 +23,7 @@ export function CompanionsPage() {
 
   const list = useQuery({
     queryKey: ['companions', tripId],
-    queryFn: () =>
-      api.get<ListCompanionsResponse>(`/trips/${tripId}/companions`),
+    queryFn: () => api.get<ListCompanionsResponse>(`/trips/${tripId}/companions`),
     enabled: !!tripId,
   })
 
@@ -107,6 +101,7 @@ export function CompanionsPage() {
       </form>
 
       <ul className="space-y-2">
+        {list.isLoading && !list.data && <ListRowsSkeleton message="동행자를 확인하고 있어요" />}
         {items.map((c) => (
           <li
             key={c.memberId}
@@ -114,20 +109,14 @@ export function CompanionsPage() {
           >
             <div className="flex items-center gap-3">
               {c.avatarUrl ? (
-                <img
-                  src={c.avatarUrl}
-                  alt=""
-                  className="h-10 w-10 rounded-full object-cover"
-                />
+                <img src={c.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sakura-100 text-sm font-bold text-sakura-700">
                   {(c.displayName ?? c.memberId).slice(0, 1).toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="font-bold text-slate-800">
-                  {c.displayName ?? c.memberId}
-                </p>
+                <p className="font-bold text-slate-800">{c.displayName ?? c.memberId}</p>
                 <p className="text-xs text-slate-500">{c.memberId}</p>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type {
   CreateExpenseInput,
   ExpenseCategory,
@@ -153,6 +154,7 @@ export function ExpensesPage() {
       )}
 
       <ul className="space-y-2">
+        {list.isLoading && !list.data && <ListRowsSkeleton message="지출 내역을 정리하고 있어요" />}
         {list.data?.expenses?.map((e) => (
           <li
             key={e.id}

@@ -28,6 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../lib/api'
 import { MapPicker } from '../components/MapPicker'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type {
   Accommodation,
   CreateScheduleInput,
@@ -79,7 +80,19 @@ export function DayDetailPage() {
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => api.del(`/schedules/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['schedules', dayId] }),
+    // 리스트에서 즉시 제거하여 UX 를 개선. 실패 시 롤백.
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['schedules', dayId] })
+      const prev = qc.getQueryData<ListSchedulesResponse>(['schedules', dayId])
+      qc.setQueryData<ListSchedulesResponse>(['schedules', dayId], (old) => ({
+        schedules: (old?.schedules ?? []).filter((s) => s.id !== id),
+      }))
+      return { prev }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['schedules', dayId], ctx.prev)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['schedules', dayId] }),
   })
 
   const reorderMut = useMutation({
@@ -123,7 +136,7 @@ export function DayDetailPage() {
         </button>
       </div>
 
-      {list.isLoading && <p>불러오는 중…</p>}
+      {list.isLoading && !list.data && <ListRowsSkeleton message="일정을 펼치고 있어요" />}
       {list.error && <p className="text-red-500">{(list.error as Error).message}</p>}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>

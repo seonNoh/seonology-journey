@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Trash2, Image as ImageIcon, Upload } from 'lucide-react'
 import { api } from '../lib/api'
 import { Lightbox } from '../components/Lightbox'
+import { GridSkeleton } from '../components/LoadingPlaceholders'
 import type { GetMediaUrlResponse, GetUploadUrlResponse, ListMediaResponse } from '../lib/types'
 
 export function MediaPage() {
@@ -115,6 +116,8 @@ export function MediaPage() {
       </div>
 
       {list.error && <p className="text-red-500">{(list.error as Error).message}</p>}
+
+      {list.isLoading && !list.data && <GridSkeleton message="사진을 꺼내오고 있어요" />}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {items.map((m, idx) => (

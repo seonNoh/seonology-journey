@@ -10,7 +10,10 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 30_000,
+      // 기본 staleTime 을 1 분으로 올려 화면 전환마다 다시 네트워크를 치지 않게 한다.
+      // 개별 쿼리 (e.g. media URL) 에서 상황에 맞는 staleTime 으로 덮어쓴다.
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
     },
   },
 })

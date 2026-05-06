@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, LinkIcon, Trash2 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { api } from '../lib/api'
+import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type { Share } from '../lib/types'
 
 interface ListSharesResponse {
@@ -86,6 +87,10 @@ export function SharePage() {
           {createMut.isPending ? '생성 중…' : '링크 생성'}
         </button>
       </div>
+
+      {list.isLoading && !list.data && (
+        <ListRowsSkeleton message="공유 링크를 불러오고 있어요" count={2} />
+      )}
 
       {shares.length > 0 && (
         <ul className="space-y-3">

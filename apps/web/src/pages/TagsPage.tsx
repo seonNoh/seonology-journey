@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, Tag as TagIcon, X } from 'lucide-react'
 import { api } from '../lib/api'
+import { CuteLoader } from '../components/CuteLoader'
 import type { ListTagsResponse, Tag } from '../lib/types'
 
 export function TagsPage() {
@@ -23,8 +24,7 @@ export function TagsPage() {
   })
 
   const createMut = useMutation({
-    mutationFn: (input: { name: string; color: string }) =>
-      api.post('/tags', input),
+    mutationFn: (input: { name: string; color: string }) => api.post('/tags', input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tags'] })
       setName('')
@@ -100,14 +100,12 @@ export function TagsPage() {
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="mb-2 text-sm font-bold text-slate-700">이 여행에 붙은 태그</h2>
+        {linked.isLoading && !linked.data && (
+          <CuteLoader message="태그를 모으고 있어요" size="sm" />
+        )}
         <div className="flex flex-wrap gap-2">
           {(linked.data?.tags ?? []).map((t) => (
-            <TagPill
-              key={t.id}
-              tag={t}
-              action="detach"
-              onAction={() => detachMut.mutate(t.id)}
-            />
+            <TagPill key={t.id} tag={t} action="detach" onAction={() => detachMut.mutate(t.id)} />
           ))}
           {(linked.data?.tags ?? []).length === 0 && (
             <p className="text-sm text-slate-400">아직 붙은 태그가 없습니다.</p>
@@ -122,13 +120,11 @@ export function TagsPage() {
             <div key={t.id} className="flex items-center gap-1">
               <button
                 onClick={() =>
-                  linkedIds.has(t.id)
-                    ? detachMut.mutate(t.id)
-                    : attachMut.mutate(t.id)
+                  linkedIds.has(t.id) ? detachMut.mutate(t.id) : attachMut.mutate(t.id)
                 }
                 className="rounded-full px-3 py-1 text-xs font-bold"
                 style={{
-                  background: linkedIds.has(t.id) ? t.color ?? '#f472b6' : '#f1f5f9',
+                  background: linkedIds.has(t.id) ? (t.color ?? '#f472b6') : '#f1f5f9',
                   color: linkedIds.has(t.id) ? 'white' : '#475569',
                 }}
               >
@@ -152,14 +148,7 @@ export function TagsPage() {
   )
 }
 
-function TagPill({
-  tag,
-  onAction,
-}: {
-  tag: Tag
-  action: 'detach'
-  onAction: () => void
-}) {
+function TagPill({ tag, onAction }: { tag: Tag; action: 'detach'; onAction: () => void }) {
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold text-white"
