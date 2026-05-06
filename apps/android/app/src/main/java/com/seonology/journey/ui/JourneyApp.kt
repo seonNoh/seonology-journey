@@ -350,7 +350,7 @@ private fun HeroMascotScene() {
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .height(14.dp)
-                .clip(RoundedCornerShape(topStart = 50, topEnd = 50))
+                .clip(RoundedCornerShape(topStart = 50.dp, topEnd = 50.dp))
                 .background(Sakura100),
         )
         // Center: main bear.
