@@ -103,4 +103,11 @@ dependencies {
 
     implementation(libs.work.runtime.ktx)
     implementation(libs.play.services.location)
+
+    testImplementation(libs.junit5.api)
+    testRuntimeOnly(libs.junit5.engine)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
