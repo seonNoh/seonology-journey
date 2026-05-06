@@ -113,6 +113,35 @@ data class Note(
 data class ListNotesResponse(val notes: List<Note> = emptyList())
 
 @JsonClass(generateAdapter = true)
+data class Meal(
+    val dayId: String = "",
+    val mealType: String = "",
+    val source: String? = null,
+    val restaurantName: String? = null,
+    val menu: String? = null,
+    val cost: Money? = null,
+    val rating: Int? = null,
+    val review: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ListMealsResponse(val meals: List<Meal> = emptyList())
+
+@JsonClass(generateAdapter = true)
+data class Accommodation(
+    val dayId: String = "",
+    val name: String = "",
+    val checkInTime: String? = null,
+    val checkOutTime: String? = null,
+    val cost: Money? = null,
+    val amenities: String? = null,
+    val address: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class AccommodationEnvelope(val accommodation: Accommodation? = null)
+
+@JsonClass(generateAdapter = true)
 data class Media(
     val id: String = "",
     val tripId: String = "",
@@ -166,6 +195,14 @@ interface JourneyApi {
 
     @POST("days/{dayId}/schedules")
     suspend fun createSchedule(@Path("dayId") dayId: String, @Body body: Schedule): Schedule
+
+    // Meals
+    @GET("days/{dayId}/meals")
+    suspend fun listMeals(@Path("dayId") dayId: String): ListMealsResponse
+
+    // Accommodation (단일 리소스)
+    @GET("days/{dayId}/accommodation")
+    suspend fun getAccommodation(@Path("dayId") dayId: String): AccommodationEnvelope
 
     // Expenses
     @GET("trips/{tripId}/expenses")
