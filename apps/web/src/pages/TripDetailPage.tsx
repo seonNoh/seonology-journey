@@ -14,6 +14,10 @@ import {
   Users,
   Image as ImageIcon,
   Plus,
+  Share2,
+  Compass,
+  Train,
+  Radio,
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { Modal } from '../components/Modal'
@@ -88,7 +92,8 @@ export function TripDetailPage() {
           )}
         </div>
       )}
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+        <NavBtn to={`/trips/${tripId}/map`} icon={<MapPin className="h-4 w-4" />} label="지도" />
         <NavBtn
           to={`/trips/${tripId}/expenses`}
           icon={<Wallet className="h-4 w-4" />}
@@ -119,6 +124,18 @@ export function TripDetailPage() {
           to={`/trips/${tripId}/media`}
           icon={<ImageIcon className="h-4 w-4" />}
           label="사진"
+        />
+        <NavBtn to={`/trips/${tripId}/share`} icon={<Share2 className="h-4 w-4" />} label="공유" />
+        <NavBtn
+          to={`/trips/${tripId}/nearby`}
+          icon={<Compass className="h-4 w-4" />}
+          label="주변"
+        />
+        <NavBtn to={`/trips/${tripId}/transit`} icon={<Train className="h-4 w-4" />} label="교통" />
+        <NavBtn
+          to={`/trips/${tripId}/tracking`}
+          icon={<Radio className="h-4 w-4" />}
+          label="트래킹"
         />
       </div>
       <div className="flex items-center justify-between">

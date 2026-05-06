@@ -13,6 +13,8 @@ import { CompanionsPage } from './pages/CompanionsPage'
 import { MediaPage } from './pages/MediaPage'
 import { SharePage } from './pages/SharePage'
 import { NearbyPage, TransitPage } from './pages/ExternalPage'
+import { MapPage } from './pages/MapPage'
+import { TrackingPage } from './pages/TrackingPage'
 
 export function App() {
   return (
@@ -36,6 +38,8 @@ export function App() {
             <Route path="/trips/:tripId/share" element={<SharePage />} />
             <Route path="/trips/:tripId/nearby" element={<NearbyPage />} />
             <Route path="/trips/:tripId/transit" element={<TransitPage />} />
+            <Route path="/trips/:tripId/map" element={<MapPage />} />
+            <Route path="/trips/:tripId/tracking" element={<TrackingPage />} />
             <Route path="/days/:dayId" element={<DayDetailPage />} />
           </Routes>
         </main>

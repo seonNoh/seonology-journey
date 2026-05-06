@@ -237,6 +237,94 @@ fun JourneyApp() {
                     onOpenNotes = { nav.navigate("trips/$tripId/notes") },
                     onOpenExpenses = { nav.navigate("trips/$tripId/expenses") },
                     onOpenMap = { nav.navigate("trips/$tripId/map") },
+                    onOpenChecklist = { nav.navigate("trips/$tripId/checklist") },
+                    onOpenReservations = { nav.navigate("trips/$tripId/reservations") },
+                    onOpenTags = { nav.navigate("trips/$tripId/tags") },
+                    onOpenCompanions = { nav.navigate("trips/$tripId/companions") },
+                    onOpenShare = { nav.navigate("trips/$tripId/share") },
+                    onOpenMedia = { nav.navigate("trips/$tripId/media") },
+                    onOpenNearby = { nav.navigate("trips/$tripId/nearby") },
+                    onOpenTransit = { nav.navigate("trips/$tripId/transit") },
+                )
+            }
+            composable("trips/{tripId}/checklist") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.ChecklistFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/reservations") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.ReservationsFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/tags") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.TagsFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/companions") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.CompanionsFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/share") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.ShareFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/media") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.MediaFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/nearby") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.NearbyFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/transit") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.TransitFullScreen(
+                    api = api, tripId = tripId, onBack = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/notes/add") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.NoteAddScreen(
+                    api = api, tripId = tripId,
+                    onBack = { nav.popBackStack() },
+                    onSaved = { nav.popBackStack() },
+                )
+            }
+            composable("trips/{tripId}/expenses/add") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                com.seonology.journey.ui.screens.ExpenseAddScreen(
+                    api = api, tripId = tripId,
+                    onBack = { nav.popBackStack() },
+                    onSaved = { nav.popBackStack() },
+                )
+            }
+            composable("days/{dayId}/meal") { entry ->
+                val dayId = entry.arguments?.getString("dayId").orEmpty()
+                com.seonology.journey.ui.screens.MealEditScreen(
+                    api = api, dayId = dayId,
+                    onBack = { nav.popBackStack() },
+                    onSaved = { nav.popBackStack() },
+                )
+            }
+            composable("days/{dayId}/accommodation") { entry ->
+                val dayId = entry.arguments?.getString("dayId").orEmpty()
+                com.seonology.journey.ui.screens.AccommodationEditScreen(
+                    api = api, dayId = dayId,
+                    onBack = { nav.popBackStack() },
+                    onSaved = { nav.popBackStack() },
                 )
             }
             composable("trips/{tripId}/map") { entry ->
@@ -254,6 +342,8 @@ fun JourneyApp() {
                     dayId = dayId,
                     onBack = { nav.popBackStack() },
                     onAddSchedule = { nav.navigate("days/$dayId/add-schedule") },
+                    onEditMeal = { nav.navigate("days/$dayId/meal") },
+                    onEditAccommodation = { nav.navigate("days/$dayId/accommodation") },
                 )
             }
             composable("days/{dayId}/add-schedule") { entry ->
@@ -271,6 +361,7 @@ fun JourneyApp() {
                     api = api,
                     tripId = tripId,
                     onBack = { nav.popBackStack() },
+                    onAdd = { nav.navigate("trips/$tripId/notes/add") },
                 )
             }
             composable("trips/{tripId}/expenses") { entry ->
@@ -279,6 +370,7 @@ fun JourneyApp() {
                     api = api,
                     tripId = tripId,
                     onBack = { nav.popBackStack() },
+                    onAdd = { nav.navigate("trips/$tripId/expenses/add") },
                 )
             }
         }
@@ -785,6 +877,14 @@ private fun TripDetailScreen(
     onOpenNotes: (String) -> Unit,
     onOpenExpenses: (String) -> Unit,
     onOpenMap: () -> Unit,
+    onOpenChecklist: () -> Unit,
+    onOpenReservations: () -> Unit,
+    onOpenTags: () -> Unit,
+    onOpenCompanions: () -> Unit,
+    onOpenShare: () -> Unit,
+    onOpenMedia: () -> Unit,
+    onOpenNearby: () -> Unit,
+    onOpenTransit: () -> Unit,
 ) {
     var trip by remember { mutableStateOf<Trip?>(null) }
     var days by remember { mutableStateOf<List<Day>>(emptyList()) }
@@ -821,6 +921,14 @@ private fun TripDetailScreen(
                     onMap = onOpenMap,
                     onNotes = { onOpenNotes(tripId) },
                     onExpenses = { onOpenExpenses(tripId) },
+                    onChecklist = onOpenChecklist,
+                    onReservations = onOpenReservations,
+                    onTags = onOpenTags,
+                    onCompanions = onOpenCompanions,
+                    onShare = onOpenShare,
+                    onMedia = onOpenMedia,
+                    onNearby = onOpenNearby,
+                    onTransit = onOpenTransit,
                 )
                 SbSection(title = "일정", icon = Icons.Default.CalendarMonth, count = "${days.size}일")
                 if (days.isEmpty()) {
@@ -951,6 +1059,14 @@ private fun TripDetailNavRow(
     onMap: () -> Unit,
     onNotes: () -> Unit,
     onExpenses: () -> Unit,
+    onChecklist: () -> Unit,
+    onReservations: () -> Unit,
+    onTags: () -> Unit,
+    onCompanions: () -> Unit,
+    onShare: () -> Unit,
+    onMedia: () -> Unit,
+    onNearby: () -> Unit,
+    onTransit: () -> Unit,
 ) {
     data class Tab(val label: String, val icon: ImageVector, val onClick: () -> Unit)
     val tabs = listOf(
@@ -958,6 +1074,14 @@ private fun TripDetailNavRow(
         Tab("지도", Icons.Default.Place, onMap),
         Tab("메모", Icons.Default.Note, onNotes),
         Tab("지출", Icons.Default.Wallet, onExpenses),
+        Tab("체크", Icons.Default.CheckCircle, onChecklist),
+        Tab("예약", Icons.Default.Flight, onReservations),
+        Tab("사진", Icons.Default.CameraAlt, onMedia),
+        Tab("동행", Icons.Default.Notifications, onCompanions),
+        Tab("태그", Icons.Default.Star, onTags),
+        Tab("공유", Icons.Default.Favorite, onShare),
+        Tab("주변", Icons.Default.Place, onNearby),
+        Tab("교통", Icons.Default.Flight, onTransit),
     )
     Row(
         modifier = Modifier
@@ -1054,6 +1178,8 @@ private fun DayDetailScreen(
     dayId: String,
     onBack: () -> Unit,
     onAddSchedule: () -> Unit,
+    onEditMeal: () -> Unit,
+    onEditAccommodation: () -> Unit,
 ) {
     var schedules by remember { mutableStateOf<List<Schedule>>(emptyList()) }
     var meals by remember { mutableStateOf<List<Meal>>(emptyList()) }
@@ -1117,7 +1243,20 @@ private fun DayDetailScreen(
                 if (schedules.isEmpty()) EmptyCard("등록된 일정이 없습니다.")
                 else ScheduleTimeline(schedules)
 
-                SbSection(title = "식사", icon = Icons.Default.Restaurant, count = "${meals.size}건")
+                SbSection(title = "식사", icon = Icons.Default.Restaurant, count = "${meals.size}건", action = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Sakura500)
+                            .clickable(onClick = onEditMeal)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("식사 입력", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                })
                 if (meals.isEmpty()) EmptyCard("식사 기록이 없습니다.")
                 else Column(
                     modifier = Modifier.padding(horizontal = Spacing.base),
@@ -1126,7 +1265,20 @@ private fun DayDetailScreen(
                     meals.forEach { MealCard(it) }
                 }
 
-                SbSection(title = "숙소", icon = Icons.Default.Hotel)
+                SbSection(title = "숙소", icon = Icons.Default.Hotel, action = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Sakura500)
+                            .clickable(onClick = onEditAccommodation)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("숙소 입력", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                })
                 if (accommodation == null) EmptyCard("등록된 숙소가 없습니다.")
                 else AccommodationCard(accommodation!!)
             }
@@ -1376,7 +1528,7 @@ private fun AccommodationCard(a: Accommodation) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit) {
+private fun NotesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit, onAdd: () -> Unit) {
     var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -1402,6 +1554,26 @@ private fun NotesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 MoodFilterRow(moodFilter, onSelect = { moodFilter = it })
+
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = Spacing.base)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Sakura500)
+                            .clickable(onClick = onAdd)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("메모 추가", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 val filtered = if (moodFilter == null) notes
                 else notes.filter { it.mood == moodFilter }
@@ -1522,7 +1694,7 @@ private fun StickyNoteCard(n: Note, index: Int) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExpensesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit) {
+private fun ExpensesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit, onAdd: () -> Unit) {
     var expenses by remember { mutableStateOf<List<Expense>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -1547,6 +1719,25 @@ private fun ExpensesScreen(api: JourneyApi, tripId: String, onBack: () -> Unit) 
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 ExpensesTotalCard(expenses)
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = Spacing.base)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Sakura500)
+                            .clickable(onClick = onAdd)
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("지출 추가", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 SbSection(title = "카테고리별")
                 CategoryBreakdown(expenses)
                 SbSection(title = "기록", count = "${expenses.size}건")
@@ -1745,7 +1936,7 @@ private fun ExpenseRow(e: Expense) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SakuraScaffold(
+internal fun SakuraScaffold(
     title: String,
     onBack: () -> Unit,
     content: @Composable (PaddingValues) -> Unit,
@@ -1774,7 +1965,7 @@ private fun SakuraScaffold(
 }
 
 @Composable
-private fun CenteredLoader() {
+internal fun CenteredLoader() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -1842,7 +2033,7 @@ private fun EmptyTrips() {
 }
 
 @Composable
-private fun EmptyCard(text: String) {
+internal fun EmptyCard(text: String) {
     Box(
         modifier = Modifier
             .padding(horizontal = Spacing.base)
@@ -1857,7 +2048,7 @@ private fun EmptyCard(text: String) {
 }
 
 @Composable
-private fun ErrorState(message: String) {
+internal fun ErrorState(message: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2059,7 +2250,7 @@ private fun AddScheduleScreen(
 }
 
 @Composable
-private fun SbField(
+internal fun SbField(
     label: String,
     value: String,
     onChange: (String) -> Unit,
