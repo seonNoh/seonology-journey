@@ -83,7 +83,7 @@ func (r *DDBRepo) Get(ctx context.Context, id string) (*journeyv1.Trip, error) {
 	// Use GSI1 to look up by tripId directly.
 	keyCond := expression.KeyAnd(
 		expression.Key("GSI1PK").Equal(expression.Value(ddb.TripKey(id))),
-		expression.Key("GSI1SK").Equal(expression.Value(ddb.TripKey(id))),
+		expression.Key("GSI1SK").Equal(expression.Value("METADATA")),
 	)
 	expr, err := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	if err != nil {
@@ -207,7 +207,7 @@ func toItem(t *journeyv1.Trip) *tripItem {
 		PK:          ddb.UserKey(t.GetOwnerId()),
 		SK:          ddb.TripKey(t.GetId()),
 		GSI1PK:      ddb.TripKey(t.GetId()),
-		GSI1SK:      ddb.TripKey(t.GetId()),
+		GSI1SK:      "METADATA",
 		GSI2PK:      ddb.UserKey(t.GetOwnerId()),
 		GSI2SK:      fmt.Sprintf("%d#%s", t.GetStatus(), t.GetStartDate()),
 		ID:          t.GetId(),
