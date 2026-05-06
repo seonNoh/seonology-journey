@@ -99,7 +99,8 @@ fun JourneyApp() {
     val nav = rememberNavController()
     var authed by remember { mutableStateOf(store.isAuthenticated) }
 
-    val authService = remember { KeycloakAuth.newService(context as Activity) }    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+    val authService = remember { KeycloakAuth.newService(context as Activity) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val data = result.data ?: return@rememberLauncherForActivityResult
         val resp = AuthorizationResponse.fromIntent(data)
         val ex = AuthorizationException.fromIntent(data)
