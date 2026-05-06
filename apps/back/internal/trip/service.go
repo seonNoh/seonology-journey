@@ -25,6 +25,7 @@ type Repository interface {
 	Create(ctx context.Context, t *journeyv1.Trip) error
 	Get(ctx context.Context, id string) (*journeyv1.Trip, error)
 	ListByOwner(ctx context.Context, ownerID string, status journeyv1.TripStatus) ([]*journeyv1.Trip, error)
+	ListByOwnerPage(ctx context.Context, ownerID string, status journeyv1.TripStatus, cursor string, limit int32) ([]*journeyv1.Trip, string, error)
 	Update(ctx context.Context, t *journeyv1.Trip) error
 	Delete(ctx context.Context, id string) error
 }
@@ -74,6 +75,37 @@ func (r *MemoryRepo) ListByOwner(_ context.Context, _ string, status journeyv1.T
 		return out[i].GetAudit().GetCreatedAt().AsTime().After(out[j].GetAudit().GetCreatedAt().AsTime())
 	})
 	return out, nil
+}
+
+// ListByOwnerPage - MemoryRepo 는 in-process 용이라 cursor 를 사용하지 않고
+// 단순 slice 기반 pagination 을 제공한다. DDB 구현체는 실제 cursor 를 사용.
+func (r *MemoryRepo) ListByOwnerPage(ctx context.Context, ownerID string, status journeyv1.TripStatus, cursor string, limit int32) ([]*journeyv1.Trip, string, error) {
+	all, err := r.ListByOwner(ctx, ownerID, status)
+	if err != nil {
+		return nil, "", err
+	}
+	offset := 0
+	if cursor != "" {
+		for i, t := range all {
+			if t.GetId() == cursor {
+				offset = i + 1
+				break
+			}
+		}
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	end := offset + int(limit)
+	if end > len(all) {
+		end = len(all)
+	}
+	page := all[offset:end]
+	next := ""
+	if end < len(all) && len(page) > 0 {
+		next = page[len(page)-1].GetId()
+	}
+	return page, next, nil
 }
 
 // Update - 기존 Trip 갱신.
@@ -146,6 +178,12 @@ func (s *Service) Get(ctx context.Context, _, id string) (*journeyv1.Trip, error
 // List - owner 의 trip 목록.
 func (s *Service) List(ctx context.Context, ownerID string, status journeyv1.TripStatus) ([]*journeyv1.Trip, error) {
 	return s.repo.ListByOwner(ctx, ownerID, status)
+}
+
+// ListPage - owner 의 trip 목록 (cursor 기반 페이지네이션).
+// limit: 1~100 (0/음수/초과치는 20 으로 치환).
+func (s *Service) ListPage(ctx context.Context, ownerID string, status journeyv1.TripStatus, cursor string, limit int32) ([]*journeyv1.Trip, string, error) {
+	return s.repo.ListByOwnerPage(ctx, ownerID, status, cursor, limit)
 }
 
 // Update - 갱신. 소유자 무관 — 전 유저 공유.

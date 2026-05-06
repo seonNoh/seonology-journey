@@ -16,6 +16,36 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/back/internal/repository/ddb"
 )
 
+// idIndex is the GSI name used by the expenses / notes / checklists /
+// reservations tables for single-attribute `id` HASH lookups. All four
+// tables were provisioned with the same index name, which lets us share
+// the small query helper below.
+const idIndex = "IdIndex"
+
+// queryByIDOnIndex does a single-item Query against the IdIndex GSI.
+func queryByIDOnIndex(ctx context.Context, client *dynamodb.Client, table, id string) (map[string]types.AttributeValue, error) {
+	keyCond := expression.Key("id").Equal(expression.Value(id))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyCond).Build()
+	if err != nil {
+		return nil, fmt.Errorf("%s id index build: %w", table, err)
+	}
+	out, err := client.Query(ctx, &dynamodb.QueryInput{
+		TableName:                 aws.String(table),
+		IndexName:                 aws.String(idIndex),
+		KeyConditionExpression:    expr.KeyCondition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		Limit:                     aws.Int32(1),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%s id index query: %w", table, err)
+	}
+	if len(out.Items) == 0 {
+		return nil, ErrNotFound
+	}
+	return out.Items[0], nil
+}
+
 // ─── Expense DDB ─────────────────────────────────────────────────────────────
 
 type expenseItem struct {
@@ -109,25 +139,12 @@ func (r *ExpenseDDBRepo) Save(ctx context.Context, e *journeyv1.Expense) error {
 }
 
 func (r *ExpenseDDBRepo) Get(ctx context.Context, id string) (*journeyv1.Expense, error) {
-	// Use GSI1 (id-index) for direct lookup by ID
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("EXPENSE#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
-	})
+	raw, err := queryByIDOnIndex(ctx, r.client, r.table, id)
 	if err != nil {
-		return nil, fmt.Errorf("expense get: %w", err)
-	}
-	if len(out.Items) == 0 {
-		return nil, ErrNotFound
+		return nil, err
 	}
 	var it expenseItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(raw, &it); err != nil {
 		return nil, err
 	}
 	return expenseFromItem(it), nil
@@ -177,12 +194,14 @@ func (r *ExpenseDDBRepo) DeleteByTrip(ctx context.Context, tripID string) error 
 	if err != nil {
 		return err
 	}
-	for _, e := range expenses {
-		if err := r.Delete(ctx, e.GetId()); err != nil {
-			return err
-		}
+	if len(expenses) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(expenses))
+	for _, e := range expenses {
+		sks = append(sks, "EXPENSE#"+e.GetId())
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }
 
 // ─── Note DDB ────────────────────────────────────────────────────────────────
@@ -257,24 +276,12 @@ func (r *NoteDDBRepo) Save(ctx context.Context, n *journeyv1.Note) error {
 }
 
 func (r *NoteDDBRepo) Get(ctx context.Context, id string) (*journeyv1.Note, error) {
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("NOTE#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
-	})
+	raw, err := queryByIDOnIndex(ctx, r.client, r.table, id)
 	if err != nil {
-		return nil, fmt.Errorf("note get: %w", err)
-	}
-	if len(out.Items) == 0 {
-		return nil, ErrNotFound
+		return nil, err
 	}
 	var it noteItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(raw, &it); err != nil {
 		return nil, err
 	}
 	return noteFromItem(it), nil
@@ -324,12 +331,14 @@ func (r *NoteDDBRepo) DeleteByTrip(ctx context.Context, tripID string) error {
 	if err != nil {
 		return err
 	}
-	for _, n := range notes {
-		if err := r.Delete(ctx, n.GetId()); err != nil {
-			return err
-		}
+	if len(notes) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(notes))
+	for _, n := range notes {
+		sks = append(sks, "NOTE#"+n.GetId())
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }
 
 // ─── Checklist DDB ───────────────────────────────────────────────────────────
@@ -404,24 +413,12 @@ func (r *ChecklistDDBRepo) Save(ctx context.Context, c *journeyv1.ChecklistItem)
 }
 
 func (r *ChecklistDDBRepo) Get(ctx context.Context, id string) (*journeyv1.ChecklistItem, error) {
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("CHECKLIST#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
-	})
+	raw, err := queryByIDOnIndex(ctx, r.client, r.table, id)
 	if err != nil {
-		return nil, fmt.Errorf("checklist get: %w", err)
-	}
-	if len(out.Items) == 0 {
-		return nil, ErrNotFound
+		return nil, err
 	}
 	var it checklistItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(raw, &it); err != nil {
 		return nil, err
 	}
 	return checklistFromItem(it), nil
@@ -471,12 +468,14 @@ func (r *ChecklistDDBRepo) DeleteByTrip(ctx context.Context, tripID string) erro
 	if err != nil {
 		return err
 	}
-	for _, c := range items {
-		if err := r.Delete(ctx, c.GetId()); err != nil {
-			return err
-		}
+	if len(items) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(items))
+	for _, c := range items {
+		sks = append(sks, "CHECKLIST#"+c.GetId())
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }
 
 // ─── Reservation DDB ─────────────────────────────────────────────────────────
@@ -575,24 +574,12 @@ func (r *ReservationDDBRepo) Save(ctx context.Context, v *journeyv1.Reservation)
 }
 
 func (r *ReservationDDBRepo) Get(ctx context.Context, id string) (*journeyv1.Reservation, error) {
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("RESERVATION#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
-	})
+	raw, err := queryByIDOnIndex(ctx, r.client, r.table, id)
 	if err != nil {
-		return nil, fmt.Errorf("reservation get: %w", err)
-	}
-	if len(out.Items) == 0 {
-		return nil, ErrNotFound
+		return nil, err
 	}
 	var it reservationItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(raw, &it); err != nil {
 		return nil, err
 	}
 	return reservationFromItem(it), nil
@@ -642,10 +629,12 @@ func (r *ReservationDDBRepo) DeleteByTrip(ctx context.Context, tripID string) er
 	if err != nil {
 		return err
 	}
-	for _, v := range items {
-		if err := r.Delete(ctx, v.GetId()); err != nil {
-			return err
-		}
+	if len(items) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(items))
+	for _, v := range items {
+		sks = append(sks, "RESERVATION#"+v.GetId())
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }

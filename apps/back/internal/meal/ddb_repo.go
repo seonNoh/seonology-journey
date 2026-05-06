@@ -76,6 +76,7 @@ func (r *DDBRepo) ListByDay(ctx context.Context, dayID string) ([]*journeyv1.Mea
 		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		ScanIndexForward:          aws.Bool(true),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("meal ddb list query: %w", err)
@@ -105,17 +106,20 @@ func (r *DDBRepo) Delete(ctx context.Context, dayID string, mt journeyv1.MealTyp
 	return nil
 }
 
+// DeleteByDay removes all meal rows for the day in one BatchWriteItem sweep.
 func (r *DDBRepo) DeleteByDay(ctx context.Context, dayID string) error {
 	meals, err := r.ListByDay(ctx, dayID)
 	if err != nil {
 		return err
 	}
-	for _, m := range meals {
-		if err := r.Delete(ctx, dayID, m.GetMealType()); err != nil {
-			return err
-		}
+	if len(meals) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(meals))
+	for _, m := range meals {
+		sks = append(sks, ddb.MealKey(m.GetMealType().String()))
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK(ddb.DayKey(dayID), sks))
 }
 
 func mealToItem(m *journeyv1.Meal) *mealItem {

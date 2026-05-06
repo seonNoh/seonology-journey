@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
@@ -14,7 +15,11 @@ import (
 
 // GetTripStatistics implements JourneyService.
 //
-// MVP: 메모리 repo 들을 직접 집계.
+// Uses a fan-out worker pool across days: each day contributes a
+// schedule count, meal count, and region label. Fetches for distinct
+// days run concurrently so overall latency is O(1) in the number of
+// days plus a small expense/media aggregate pair, instead of O(N) as
+// the previous implementation did.
 func (s *JourneyServer) GetTripStatistics(ctx context.Context, req *journeyv1.GetTripStatisticsRequest) (*journeyv1.GetTripStatisticsResponse, error) {
 	owner, err := ownerFromCtx(ctx)
 	if err != nil {
@@ -25,28 +30,81 @@ func (s *JourneyServer) GetTripStatistics(ctx context.Context, req *journeyv1.Ge
 	}
 	days, _ := s.d.Day.List(ctx, req.GetTripId())
 	stats := &journeyv1.TripStatistics{TripId: req.GetTripId(), TotalDays: int32(len(days))}
-	regions := map[string]struct{}{}
+
+	// Aggregations protected by a mutex; writes are small and coarse.
+	var (
+		mu            sync.Mutex
+		scheduleTotal int32
+		mealTotal     int32
+		regions       = map[string]struct{}{}
+	)
+
+	// Cap concurrency so a trip with 30+ days doesn't spam DynamoDB.
+	const maxParallel = 8
+	sem := make(chan struct{}, maxParallel)
+	var wg sync.WaitGroup
+
 	for _, d := range days {
+		d := d
 		if d.GetRegion() != "" {
+			mu.Lock()
 			regions[d.GetRegion()] = struct{}{}
+			mu.Unlock()
 		}
-		if scs, err := s.d.Schedule.List(ctx, d.GetId()); err == nil {
-			stats.TotalSchedules += int32(len(scs))
-		}
-		if ms, err := s.d.Meal.List(ctx, d.GetId()); err == nil {
-			stats.TotalMeals += int32(len(ms))
-		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			scCount := int32(0)
+			if scs, err := s.d.Schedule.List(ctx, d.GetId()); err == nil {
+				scCount = int32(len(scs))
+			}
+			meCount := int32(0)
+			if ms, err := s.d.Meal.List(ctx, d.GetId()); err == nil {
+				meCount = int32(len(ms))
+			}
+			mu.Lock()
+			scheduleTotal += scCount
+			mealTotal += meCount
+			mu.Unlock()
+		}()
 	}
-	stats.VisitedRegions = int32(len(regions))
+
+	// Expense summary and media count run in parallel with the day fan-out.
+	var (
+		expenseWg      sync.WaitGroup
+		expenseSummary *journeyv1.ExpenseSummary
+		mediaCount     int
+	)
 	if s.d.Expense != nil {
-		if sum, err := s.d.Expense.Summary(ctx, req.GetTripId()); err == nil {
-			stats.TotalExpense = sum.GetGrandTotal()
-		}
+		expenseWg.Add(1)
+		go func() {
+			defer expenseWg.Done()
+			if sum, err := s.d.Expense.Summary(ctx, req.GetTripId()); err == nil {
+				expenseSummary = sum
+			}
+		}()
 	}
 	if s.d.MediaRepo != nil {
-		if n, err := s.d.MediaRepo.CountByTrip(ctx, req.GetTripId()); err == nil {
-			stats.TotalPhotos = int32(n)
-		}
+		expenseWg.Add(1)
+		go func() {
+			defer expenseWg.Done()
+			if n, err := s.d.MediaRepo.CountByTrip(ctx, req.GetTripId()); err == nil {
+				mediaCount = n
+			}
+		}()
+	}
+
+	wg.Wait()
+	expenseWg.Wait()
+
+	stats.TotalSchedules = scheduleTotal
+	stats.TotalMeals = mealTotal
+	stats.VisitedRegions = int32(len(regions))
+	stats.TotalPhotos = int32(mediaCount)
+	if expenseSummary != nil {
+		stats.TotalExpense = expenseSummary.GetGrandTotal()
 	}
 	return &journeyv1.GetTripStatisticsResponse{Stats: stats}, nil
 }

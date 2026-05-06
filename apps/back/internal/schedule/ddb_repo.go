@@ -16,7 +16,10 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/back/internal/repository/ddb"
 )
 
-const schedulesTable = "schedules"
+const (
+	schedulesTable  = "schedules"
+	scheduleIDIndex = "IdIndex"
+)
 
 type scheduleItem struct {
 	PK              string  `dynamodbav:"PK"`
@@ -73,20 +76,23 @@ func (r *DDBRepo) Create(ctx context.Context, s *journeyv1.Schedule) error {
 	return nil
 }
 
+// Get resolves a schedule by ID via the IdIndex GSI.
 func (r *DDBRepo) Get(ctx context.Context, id string) (*journeyv1.Schedule, error) {
-	filt := expression.Name("id").Equal(expression.Value(id))
-	expr, err := expression.NewBuilder().WithFilter(filt).Build()
+	keyCond := expression.Key("id").Equal(expression.Value(id))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	if err != nil {
 		return nil, fmt.Errorf("schedule ddb get build: %w", err)
 	}
-	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
+	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:                 aws.String(r.table),
-		FilterExpression:          expr.Filter(),
+		IndexName:                 aws.String(scheduleIDIndex),
+		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		Limit:                     aws.Int32(1),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("schedule ddb get scan: %w", err)
+		return nil, fmt.Errorf("schedule ddb get query: %w", err)
 	}
 	if len(out.Items) == 0 {
 		return nil, ErrNotFound
@@ -163,25 +169,20 @@ func (r *DDBRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// DeleteByDay deletes all schedules for a given day.
+// DeleteByDay deletes all schedules for a given day using BatchWriteItem.
 func (r *DDBRepo) DeleteByDay(ctx context.Context, dayID string) error {
 	schedules, err := r.ListByDay(ctx, dayID)
 	if err != nil {
 		return err
 	}
-	for _, s := range schedules {
-		_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-			TableName: aws.String(r.table),
-			Key: map[string]types.AttributeValue{
-				"PK": &types.AttributeValueMemberS{Value: ddb.DayKey(dayID)},
-				"SK": &types.AttributeValueMemberS{Value: ddb.ScheduleKey(s.GetId())},
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("schedule ddb deleteByDay %s: %w", s.GetId(), err)
-		}
+	if len(schedules) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(schedules))
+	for _, s := range schedules {
+		sks = append(sks, ddb.ScheduleKey(s.GetId()))
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK(ddb.DayKey(dayID), sks))
 }
 
 func scheduleToItem(s *journeyv1.Schedule) *scheduleItem {

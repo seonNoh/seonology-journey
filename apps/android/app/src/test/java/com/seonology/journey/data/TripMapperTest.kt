@@ -8,8 +8,8 @@ class TripMapperTest {
 
     @Test
     fun `Trip data class defaults are correct`() {
-        val trip = Trip(tripId = "t1", title = "Tokyo Trip")
-        assertEquals("t1", trip.tripId)
+        val trip = Trip(id = "t1", title = "Tokyo Trip")
+        assertEquals("t1", trip.id)
         assertEquals("Tokyo Trip", trip.title)
         assertEquals(null, trip.destination)
         assertEquals(null, trip.status)
@@ -30,7 +30,7 @@ class TripMapperTest {
 
     @Test
     fun `Day data class dayNumber defaults to 0`() {
-        val day = Day(dayId = "d1", tripId = "t1", dayDate = "2025-03-01")
+        val day = Day(id = "d1", tripId = "t1", date = "2025-03-01")
         assertEquals(0, day.dayNumber)
     }
 }

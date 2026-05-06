@@ -39,7 +39,7 @@ func (a *API) Mount(r chi.Router) {
 			return a.J.CreateTrip(reqctx(r), req)
 		}))
 		r.Get("/trips", a.handle(func(r *http.Request) (proto.Message, error) {
-			req := &journeyv1.ListTripsRequest{}
+			req := &journeyv1.ListTripsRequest{Page: pageReqFrom(r)}
 			if v := r.URL.Query().Get("status"); v != "" {
 				if i, err := strconv.Atoi(v); err == nil {
 					req.Status = journeyv1.TripStatus(i)
@@ -369,7 +369,9 @@ func (a *API) Mount(r chi.Router) {
 		}))
 		r.Get("/trips/{tripId}/media", a.handle(func(r *http.Request) (proto.Message, error) {
 			return a.J.ListMedia(reqctx(r), &journeyv1.ListMediaRequest{
-				TripId: chi.URLParam(r, "tripId"), DayId: r.URL.Query().Get("day_id"),
+				TripId: chi.URLParam(r, "tripId"),
+				DayId:  r.URL.Query().Get("day_id"),
+				Page:   pageReqFrom(r),
 			})
 		}))
 		r.Delete("/media/{id}", a.handle(func(r *http.Request) (proto.Message, error) {
@@ -487,3 +489,21 @@ func writeErr(w http.ResponseWriter, err error) {
 
 // 컴파일 안정용.
 var _ = errors.Is
+
+// pageReqFrom extracts cursor/limit query params into a PageRequest.
+// Returns nil when neither is supplied so callers omit the field in the
+// gRPC request and let the server apply its default limit.
+func pageReqFrom(r *http.Request) *journeyv1.PageRequest {
+	cursor := r.URL.Query().Get("cursor")
+	limitStr := r.URL.Query().Get("limit")
+	if cursor == "" && limitStr == "" {
+		return nil
+	}
+	pr := &journeyv1.PageRequest{Cursor: cursor}
+	if limitStr != "" {
+		if n, err := strconv.Atoi(limitStr); err == nil && n > 0 && n <= 100 {
+			pr.Limit = int32(n)
+		}
+	}
+	return pr
+}

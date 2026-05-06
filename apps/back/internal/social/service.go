@@ -136,32 +136,39 @@ func (s *CompanionService) Remove(ctx context.Context, tripID, memberID string) 
 // TagRepo - 메모리.
 type TagRepo struct {
 	mu      sync.RWMutex
-	tags    map[string]*journeyv1.Tag      // tagID -> Tag
-	tripTag map[string]map[string]struct{} // tripID -> tagID set
+	tags    map[string]map[string]*journeyv1.Tag // userID -> (tagID -> Tag)
+	tripTag map[string]map[string]*journeyv1.Tag // tripID -> (tagID -> denormalized Tag)
 }
 
 // NewTagRepo - 생성.
 func NewTagRepo() *TagRepo {
-	return &TagRepo{tags: make(map[string]*journeyv1.Tag), tripTag: make(map[string]map[string]struct{})}
+	return &TagRepo{
+		tags:    make(map[string]map[string]*journeyv1.Tag),
+		tripTag: make(map[string]map[string]*journeyv1.Tag),
+	}
 }
 
 // Save - tag 저장.
 func (r *TagRepo) Save(_ context.Context, t *journeyv1.Tag) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.tags[t.GetId()] = t
+	if _, ok := r.tags[t.GetUserId()]; !ok {
+		r.tags[t.GetUserId()] = make(map[string]*journeyv1.Tag)
+	}
+	r.tags[t.GetUserId()][t.GetId()] = t
 	return nil
 }
 
-// Get - 조회.
-func (r *TagRepo) Get(_ context.Context, id string) (*journeyv1.Tag, error) {
+// Get - 조회 (userID 필수).
+func (r *TagRepo) Get(_ context.Context, userID, id string) (*journeyv1.Tag, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	t, ok := r.tags[id]
-	if !ok {
-		return nil, ErrNotFound
+	if byUser, ok := r.tags[userID]; ok {
+		if t, ok := byUser[id]; ok {
+			return t, nil
+		}
 	}
-	return t, nil
+	return nil, ErrNotFound
 }
 
 // ListByUser - 사용자 태그 목록.
@@ -169,20 +176,20 @@ func (r *TagRepo) ListByUser(_ context.Context, userID string) ([]*journeyv1.Tag
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*journeyv1.Tag, 0)
-	for _, t := range r.tags {
-		if t.GetUserId() == userID {
-			out = append(out, t)
-		}
+	for _, t := range r.tags[userID] {
+		out = append(out, t)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
 	return out, nil
 }
 
-// Delete - 삭제 (모든 trip 연결도 끊음).
-func (r *TagRepo) Delete(_ context.Context, id string) error {
+// Delete - 삭제 (userID 필수; 모든 trip 연결도 끊음).
+func (r *TagRepo) Delete(_ context.Context, userID, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	delete(r.tags, id)
+	if byUser, ok := r.tags[userID]; ok {
+		delete(byUser, id)
+	}
 	for tripID, set := range r.tripTag {
 		delete(set, id)
 		if len(set) == 0 {
@@ -192,17 +199,14 @@ func (r *TagRepo) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-// Attach - trip 에 tag 부착.
-func (r *TagRepo) Attach(_ context.Context, tripID, tagID string) error {
+// Attach - trip 에 tag 부착 (denormalized).
+func (r *TagRepo) Attach(_ context.Context, tripID string, tag *journeyv1.Tag) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.tags[tagID]; !ok {
-		return ErrNotFound
-	}
 	if _, ok := r.tripTag[tripID]; !ok {
-		r.tripTag[tripID] = make(map[string]struct{})
+		r.tripTag[tripID] = make(map[string]*journeyv1.Tag)
 	}
-	r.tripTag[tripID][tagID] = struct{}{}
+	r.tripTag[tripID][tag.GetId()] = tag
 	return nil
 }
 
@@ -222,10 +226,8 @@ func (r *TagRepo) ListByTrip(_ context.Context, tripID string) ([]*journeyv1.Tag
 	defer r.mu.RUnlock()
 	out := make([]*journeyv1.Tag, 0)
 	if set, ok := r.tripTag[tripID]; ok {
-		for tagID := range set {
-			if t, ok := r.tags[tagID]; ok {
-				out = append(out, t)
-			}
+		for _, t := range set {
+			out = append(out, t)
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
@@ -254,17 +256,28 @@ func (s *TagService) Create(ctx context.Context, userID string, req *journeyv1.C
 	return t, s.repo.Save(ctx, t)
 }
 
+// Get - 조회.
+func (s *TagService) Get(ctx context.Context, userID, id string) (*journeyv1.Tag, error) {
+	return s.repo.Get(ctx, userID, id)
+}
+
 // List - 사용자 태그.
 func (s *TagService) List(ctx context.Context, userID string) ([]*journeyv1.Tag, error) {
 	return s.repo.ListByUser(ctx, userID)
 }
 
 // Delete - 삭제.
-func (s *TagService) Delete(ctx context.Context, id string) error { return s.repo.Delete(ctx, id) }
+func (s *TagService) Delete(ctx context.Context, userID, id string) error {
+	return s.repo.Delete(ctx, userID, id)
+}
 
-// Attach - 부착.
-func (s *TagService) Attach(ctx context.Context, tripID, tagID string) error {
-	return s.repo.Attach(ctx, tripID, tagID)
+// Attach - 부착. 태그 본체를 미리 조회해 denormalized row 를 쓴다.
+func (s *TagService) Attach(ctx context.Context, userID, tripID, tagID string) error {
+	t, err := s.repo.Get(ctx, userID, tagID)
+	if err != nil {
+		return err
+	}
+	return s.repo.Attach(ctx, tripID, t)
 }
 
 // Detach - 제거.
@@ -282,31 +295,35 @@ func (s *TagService) ListByTrip(ctx context.Context, tripID string) ([]*journeyv
 // TemplateRepo - 메모리.
 type TemplateRepo struct {
 	mu    sync.RWMutex
-	store map[string]*journeyv1.Template
+	store map[string]map[string]*journeyv1.Template // userID -> (templateID -> Template)
 }
 
 // NewTemplateRepo - 생성.
 func NewTemplateRepo() *TemplateRepo {
-	return &TemplateRepo{store: make(map[string]*journeyv1.Template)}
+	return &TemplateRepo{store: make(map[string]map[string]*journeyv1.Template)}
 }
 
 // Save - 저장.
 func (r *TemplateRepo) Save(_ context.Context, t *journeyv1.Template) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.store[t.GetId()] = t
+	if _, ok := r.store[t.GetUserId()]; !ok {
+		r.store[t.GetUserId()] = make(map[string]*journeyv1.Template)
+	}
+	r.store[t.GetUserId()][t.GetId()] = t
 	return nil
 }
 
 // Get - 조회.
-func (r *TemplateRepo) Get(_ context.Context, id string) (*journeyv1.Template, error) {
+func (r *TemplateRepo) Get(_ context.Context, userID, id string) (*journeyv1.Template, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	t, ok := r.store[id]
-	if !ok {
-		return nil, ErrNotFound
+	if byUser, ok := r.store[userID]; ok {
+		if t, ok := byUser[id]; ok {
+			return t, nil
+		}
 	}
-	return t, nil
+	return nil, ErrNotFound
 }
 
 // ListByUser - 목록.
@@ -314,23 +331,20 @@ func (r *TemplateRepo) ListByUser(_ context.Context, userID string) ([]*journeyv
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*journeyv1.Template, 0)
-	for _, t := range r.store {
-		if t.GetUserId() == userID {
-			out = append(out, t)
-		}
+	for _, t := range r.store[userID] {
+		out = append(out, t)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
 	return out, nil
 }
 
 // Delete - 삭제.
-func (r *TemplateRepo) Delete(_ context.Context, id string) error {
+func (r *TemplateRepo) Delete(_ context.Context, userID, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.store[id]; !ok {
-		return ErrNotFound
+	if byUser, ok := r.store[userID]; ok {
+		delete(byUser, id)
 	}
-	delete(r.store, id)
 	return nil
 }
 
@@ -359,8 +373,8 @@ func (s *TemplateService) Save(ctx context.Context, userID string, req *journeyv
 }
 
 // Get - 조회.
-func (s *TemplateService) Get(ctx context.Context, id string) (*journeyv1.Template, error) {
-	return s.repo.Get(ctx, id)
+func (s *TemplateService) Get(ctx context.Context, userID, id string) (*journeyv1.Template, error) {
+	return s.repo.Get(ctx, userID, id)
 }
 
 // List - 사용자 템플릿.
@@ -369,8 +383,8 @@ func (s *TemplateService) List(ctx context.Context, userID string) ([]*journeyv1
 }
 
 // Delete - 삭제.
-func (s *TemplateService) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+func (s *TemplateService) Delete(ctx context.Context, userID, id string) error {
+	return s.repo.Delete(ctx, userID, id)
 }
 
 // === FavoritePlace ===
@@ -378,19 +392,22 @@ func (s *TemplateService) Delete(ctx context.Context, id string) error {
 // FavoriteRepo - 메모리.
 type FavoriteRepo struct {
 	mu    sync.RWMutex
-	store map[string]*journeyv1.FavoritePlace
+	store map[string]map[string]*journeyv1.FavoritePlace // userID -> (placeID -> FavoritePlace)
 }
 
 // NewFavoriteRepo - 생성.
 func NewFavoriteRepo() *FavoriteRepo {
-	return &FavoriteRepo{store: make(map[string]*journeyv1.FavoritePlace)}
+	return &FavoriteRepo{store: make(map[string]map[string]*journeyv1.FavoritePlace)}
 }
 
 // Save - 저장.
 func (r *FavoriteRepo) Save(_ context.Context, p *journeyv1.FavoritePlace) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.store[p.GetId()] = p
+	if _, ok := r.store[p.GetUserId()]; !ok {
+		r.store[p.GetUserId()] = make(map[string]*journeyv1.FavoritePlace)
+	}
+	r.store[p.GetUserId()][p.GetId()] = p
 	return nil
 }
 
@@ -399,23 +416,20 @@ func (r *FavoriteRepo) ListByUser(_ context.Context, userID string) ([]*journeyv
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*journeyv1.FavoritePlace, 0)
-	for _, p := range r.store {
-		if p.GetUserId() == userID {
-			out = append(out, p)
-		}
+	for _, p := range r.store[userID] {
+		out = append(out, p)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
 	return out, nil
 }
 
 // Delete - 삭제.
-func (r *FavoriteRepo) Delete(_ context.Context, id string) error {
+func (r *FavoriteRepo) Delete(_ context.Context, userID, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.store[id]; !ok {
-		return ErrNotFound
+	if byUser, ok := r.store[userID]; ok {
+		delete(byUser, id)
 	}
-	delete(r.store, id)
 	return nil
 }
 
@@ -451,8 +465,8 @@ func (s *FavoriteService) List(ctx context.Context, userID string) ([]*journeyv1
 }
 
 // Remove - 삭제.
-func (s *FavoriteService) Remove(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+func (s *FavoriteService) Remove(ctx context.Context, userID, id string) error {
+	return s.repo.Delete(ctx, userID, id)
 }
 
 // === Share ===

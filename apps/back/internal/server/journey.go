@@ -161,11 +161,20 @@ func (s *JourneyServer) ListTrips(ctx context.Context, req *journeyv1.ListTripsR
 	if err != nil {
 		return nil, err
 	}
-	trips, err := s.d.Trip.List(ctx, owner, req.GetStatus())
+	cursor := ""
+	limit := int32(0)
+	if req.GetPage() != nil {
+		cursor = req.GetPage().GetCursor()
+		limit = req.GetPage().GetLimit()
+	}
+	trips, next, err := s.d.Trip.ListPage(ctx, owner, req.GetStatus(), cursor, limit)
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	return &journeyv1.ListTripsResponse{Trips: trips, Page: &journeyv1.PageInfo{HasMore: false}}, nil
+	return &journeyv1.ListTripsResponse{
+		Trips: trips,
+		Page:  &journeyv1.PageInfo{NextCursor: next, HasMore: next != ""},
+	}, nil
 }
 
 // UpdateTrip implements JourneyService.

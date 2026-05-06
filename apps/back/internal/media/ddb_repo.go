@@ -16,13 +16,14 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/back/internal/repository/ddb"
 )
 
-const mediaTable = "media"
+const (
+	mediaTable   = "media"
+	mediaIDIndex = "IdIndex"
+)
 
 type mediaItem struct {
 	PK             string  `dynamodbav:"PK"`
 	SK             string  `dynamodbav:"SK"`
-	GSI1PK         string  `dynamodbav:"GSI1PK,omitempty"`
-	GSI1SK         string  `dynamodbav:"GSI1SK,omitempty"`
 	ID             string  `dynamodbav:"id"`
 	TripID         string  `dynamodbav:"tripId"`
 	DayID          string  `dynamodbav:"dayId,omitempty"`
@@ -65,20 +66,23 @@ func (r *DDBRepo) Save(ctx context.Context, m *journeyv1.Media) error {
 	return nil
 }
 
+// Get resolves a media item by ID via the IdIndex GSI.
 func (r *DDBRepo) Get(ctx context.Context, id string) (*journeyv1.Media, error) {
-	filt := expression.Name("id").Equal(expression.Value(id))
-	expr, err := expression.NewBuilder().WithFilter(filt).Build()
+	keyCond := expression.Key("id").Equal(expression.Value(id))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	if err != nil {
 		return nil, fmt.Errorf("media ddb get build: %w", err)
 	}
-	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
+	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:                 aws.String(r.table),
-		FilterExpression:          expr.Filter(),
+		IndexName:                 aws.String(mediaIDIndex),
+		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		Limit:                     aws.Int32(1),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("media ddb get scan: %w", err)
+		return nil, fmt.Errorf("media ddb get query: %w", err)
 	}
 	if len(out.Items) == 0 {
 		return nil, fmt.Errorf("media: not found")
@@ -148,17 +152,25 @@ func (r *DDBRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteByTrip removes every media row for the trip using batched writes.
+// The SK is rebuilt from each item's takenAt so we avoid re-reading individually.
 func (r *DDBRepo) DeleteByTrip(ctx context.Context, tripID string) error {
 	items, err := r.ListByTrip(ctx, tripID, "")
 	if err != nil {
 		return err
 	}
-	for _, m := range items {
-		if err := r.Delete(ctx, m.GetId()); err != nil {
-			return err
-		}
+	if len(items) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(items))
+	for _, m := range items {
+		takenAt := ""
+		if m.GetTakenAt() != nil {
+			takenAt = m.GetTakenAt().AsTime().Format(time.RFC3339)
+		}
+		sks = append(sks, ddb.MediaKey(takenAt, m.GetId()))
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK(ddb.TripKey(tripID), sks))
 }
 
 func (r *DDBRepo) CountByTrip(ctx context.Context, tripID string) (int, error) {
@@ -202,10 +214,6 @@ func mediaToItem(m *journeyv1.Media) *mediaItem {
 		TakenAt:        takenAt,
 		Caption:        m.GetCaption(),
 	}
-	if m.GetDayId() != "" {
-		item.GSI1PK = ddb.DayKey(m.GetDayId())
-		item.GSI1SK = ddb.MediaKey(takenAt, m.GetId())
-	}
 	if m.GetLocation() != nil {
 		item.Latitude = m.GetLocation().GetLatitude()
 		item.Longitude = m.GetLocation().GetLongitude()
@@ -248,4 +256,53 @@ func mediaFromItem(item *mediaItem) *journeyv1.Media {
 		}
 	}
 	return m
+}
+
+// ListByTripPage is the cursor-aware paged variant of ListByTrip.
+func (r *DDBRepo) ListByTripPage(ctx context.Context, tripID, dayID, cursor string, limit int32) ([]*journeyv1.Media, string, error) {
+	keyCond := expression.KeyAnd(
+		expression.Key("PK").Equal(expression.Value(ddb.TripKey(tripID))),
+		expression.Key("SK").BeginsWith("MEDIA#"),
+	)
+	builder := expression.NewBuilder().WithKeyCondition(keyCond)
+	if dayID != "" {
+		builder = builder.WithFilter(expression.Name("dayId").Equal(expression.Value(dayID)))
+	}
+	expr, err := builder.Build()
+	if err != nil {
+		return nil, "", fmt.Errorf("media ddb list page build: %w", err)
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	start, err := ddb.DecodeCursor(cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
+		TableName:                 aws.String(r.table),
+		KeyConditionExpression:    expr.KeyCondition(),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ScanIndexForward:          aws.Bool(false),
+		Limit:                     aws.Int32(limit),
+		ExclusiveStartKey:         start,
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("media ddb list page query: %w", err)
+	}
+	result := make([]*journeyv1.Media, 0, len(out.Items))
+	for _, raw := range out.Items {
+		var item mediaItem
+		if err := attributevalue.UnmarshalMap(raw, &item); err != nil {
+			return nil, "", fmt.Errorf("media ddb list page unmarshal: %w", err)
+		}
+		result = append(result, mediaFromItem(&item))
+	}
+	next, err := ddb.EncodeCursor(out.LastEvaluatedKey)
+	if err != nil {
+		return nil, "", err
+	}
+	return result, next, nil
 }

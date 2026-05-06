@@ -24,6 +24,7 @@ type Repository interface {
 	Save(ctx context.Context, m *journeyv1.Media) error
 	Get(ctx context.Context, id string) (*journeyv1.Media, error)
 	ListByTrip(ctx context.Context, tripID, dayID string) ([]*journeyv1.Media, error)
+	ListByTripPage(ctx context.Context, tripID, dayID, cursor string, limit int32) ([]*journeyv1.Media, string, error)
 	Delete(ctx context.Context, id string) error
 	DeleteByTrip(ctx context.Context, tripID string) error
 	CountByTrip(ctx context.Context, tripID string) (int, error)
@@ -75,6 +76,36 @@ func (r *MemoryRepo) ListByTrip(_ context.Context, tripID, dayID string) ([]*jou
 		return out[i].GetTakenAt().AsTime().Before(out[j].GetTakenAt().AsTime())
 	})
 	return out, nil
+}
+
+// ListByTripPage - memory 구현은 cursor 를 마지막 id 로 단순화.
+func (r *MemoryRepo) ListByTripPage(ctx context.Context, tripID, dayID, cursor string, limit int32) ([]*journeyv1.Media, string, error) {
+	all, err := r.ListByTrip(ctx, tripID, dayID)
+	if err != nil {
+		return nil, "", err
+	}
+	offset := 0
+	if cursor != "" {
+		for i, m := range all {
+			if m.GetId() == cursor {
+				offset = i + 1
+				break
+			}
+		}
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	end := offset + int(limit)
+	if end > len(all) {
+		end = len(all)
+	}
+	page := all[offset:end]
+	next := ""
+	if end < len(all) && len(page) > 0 {
+		next = page[len(page)-1].GetId()
+	}
+	return page, next, nil
 }
 
 // Delete - 삭제.
@@ -204,6 +235,11 @@ func (s *Service) ConfirmUpload(ctx context.Context, req *journeyv1.ConfirmUploa
 // List - trip / day 목록.
 func (s *Service) List(ctx context.Context, tripID, dayID string) ([]*journeyv1.Media, error) {
 	return s.repo.ListByTrip(ctx, tripID, dayID)
+}
+
+// ListPage - trip / day 의 미디어 목록 (cursor 기반).
+func (s *Service) ListPage(ctx context.Context, tripID, dayID, cursor string, limit int32) ([]*journeyv1.Media, string, error) {
+	return s.repo.ListByTripPage(ctx, tripID, dayID, cursor, limit)
 }
 
 // Get - id 조회.

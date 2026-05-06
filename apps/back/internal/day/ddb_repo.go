@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -17,6 +16,10 @@ import (
 )
 
 const daysTable = "days"
+
+// dayIDIndex is the GSI provisioned on the days table with `id` as HASH.
+// It allows O(1) lookup by dayID without requiring the owning tripID.
+const dayIDIndex = "DayIdIndex"
 
 type dayItem struct {
 	PK           string `dynamodbav:"PK"`
@@ -64,24 +67,24 @@ func (r *DDBRepo) Create(ctx context.Context, d *journeyv1.Day) error {
 	return nil
 }
 
+// Get queries the DayIdIndex GSI for O(1) lookup by dayID.
+// Replaces the previous full-table Scan.
 func (r *DDBRepo) Get(ctx context.Context, id string) (*journeyv1.Day, error) {
-	// Day ID alone doesn't give us the PK (tripID), so we scan with filter.
-	// For production with large data, consider a GSI on day ID.
-	// For now, iterate all items. Alternatively, encode tripID in day ID.
-	// Use a simple approach: scan with filter (acceptable for small scale).
-	filt := expression.Name("id").Equal(expression.Value(id))
-	expr, err := expression.NewBuilder().WithFilter(filt).Build()
+	keyCond := expression.Key("id").Equal(expression.Value(id))
+	expr, err := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	if err != nil {
 		return nil, fmt.Errorf("day ddb get build expr: %w", err)
 	}
-	out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
+	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:                 aws.String(r.table),
-		FilterExpression:          expr.Filter(),
+		IndexName:                 aws.String(dayIDIndex),
+		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
+		Limit:                     aws.Int32(1),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("day ddb get scan: %w", err)
+		return nil, fmt.Errorf("day ddb get query: %w", err)
 	}
 	if len(out.Items) == 0 {
 		return nil, ErrNotFound
@@ -140,24 +143,21 @@ func (r *DDBRepo) Update(ctx context.Context, d *journeyv1.Day) error {
 	return nil
 }
 
+// DeleteByTrip removes every day for the trip in one BatchWriteItem call
+// per 25-item chunk. Previous implementation issued one DeleteItem per day.
 func (r *DDBRepo) DeleteByTrip(ctx context.Context, tripID string) error {
 	days, err := r.ListByTrip(ctx, tripID)
 	if err != nil {
 		return err
 	}
-	for _, d := range days {
-		_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-			TableName: aws.String(r.table),
-			Key: map[string]types.AttributeValue{
-				"PK": &types.AttributeValueMemberS{Value: ddb.TripKey(tripID)},
-				"SK": &types.AttributeValueMemberS{Value: ddb.DayKey(d.GetId())},
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("day ddb delete item %s: %w", d.GetId(), err)
-		}
+	if len(days) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(days))
+	for _, d := range days {
+		sks = append(sks, ddb.DayKey(d.GetId()))
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK(ddb.TripKey(tripID), sks))
 }
 
 func dayToItem(d *journeyv1.Day) *dayItem {

@@ -49,11 +49,20 @@ func (s *JourneyServer) ListMedia(ctx context.Context, req *journeyv1.ListMediaR
 	if err := s.requireTripOwner(ctx, owner, req.GetTripId()); err != nil {
 		return nil, err
 	}
-	out, err := s.d.Media.List(ctx, req.GetTripId(), req.GetDayId())
+	cursor := ""
+	limit := int32(0)
+	if req.GetPage() != nil {
+		cursor = req.GetPage().GetCursor()
+		limit = req.GetPage().GetLimit()
+	}
+	out, next, err := s.d.Media.ListPage(ctx, req.GetTripId(), req.GetDayId(), cursor, limit)
 	if err != nil {
 		return nil, mapErr(err)
 	}
-	return &journeyv1.ListMediaResponse{Items: out, Page: &journeyv1.PageInfo{HasMore: false}}, nil
+	return &journeyv1.ListMediaResponse{
+		Items: out,
+		Page:  &journeyv1.PageInfo{NextCursor: next, HasMore: next != ""},
+	}, nil
 }
 
 // DeleteMedia implements JourneyService.

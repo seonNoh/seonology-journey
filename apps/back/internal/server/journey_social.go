@@ -105,14 +105,13 @@ func (s *JourneyServer) DeleteTag(ctx context.Context, req *journeyv1.DeleteTagR
 	if err != nil {
 		return nil, err
 	}
-	t, err := s.d.TagRepo.Get(ctx, req.GetTagId())
-	if err != nil {
+	// Verify the tag belongs to the caller by attempting a direct PK read.
+	// A missing row surfaces as NotFound; mismatched owner is indistinguishable
+	// from a missing tag, which matches the authorization intent.
+	if _, err := s.d.Tag.Get(ctx, owner, req.GetTagId()); err != nil {
 		return nil, mapErr(err)
 	}
-	if t.GetUserId() != owner {
-		return nil, mapErr(err)
-	}
-	if err := s.d.Tag.Delete(ctx, req.GetTagId()); err != nil {
+	if err := s.d.Tag.Delete(ctx, owner, req.GetTagId()); err != nil {
 		return nil, mapErr(err)
 	}
 	return &journeyv1.DeleteTagResponse{}, nil
@@ -127,7 +126,7 @@ func (s *JourneyServer) AttachTag(ctx context.Context, req *journeyv1.AttachTagR
 	if err := s.requireTripOwner(ctx, owner, req.GetTripId()); err != nil {
 		return nil, err
 	}
-	if err := s.d.Tag.Attach(ctx, req.GetTripId(), req.GetTagId()); err != nil {
+	if err := s.d.Tag.Attach(ctx, owner, req.GetTripId(), req.GetTagId()); err != nil {
 		return nil, mapErr(err)
 	}
 	return &journeyv1.AttachTagResponse{}, nil
@@ -190,11 +189,8 @@ func (s *JourneyServer) CreateTripFromTemplate(ctx context.Context, req *journey
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := s.d.Template.Get(ctx, req.GetTemplateId())
+	tpl, err := s.d.Template.Get(ctx, owner, req.GetTemplateId())
 	if err != nil {
-		return nil, mapErr(err)
-	}
-	if tpl.GetUserId() != owner {
 		return nil, mapErr(err)
 	}
 	src, err := s.d.Trip.Get(ctx, owner, tpl.GetSourceTripId())
@@ -236,14 +232,10 @@ func (s *JourneyServer) DeleteTemplate(ctx context.Context, req *journeyv1.Delet
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := s.d.Template.Get(ctx, req.GetTemplateId())
-	if err != nil {
+	if _, err := s.d.Template.Get(ctx, owner, req.GetTemplateId()); err != nil {
 		return nil, mapErr(err)
 	}
-	if tpl.GetUserId() != owner {
-		return nil, mapErr(err)
-	}
-	if err := s.d.Template.Delete(ctx, req.GetTemplateId()); err != nil {
+	if err := s.d.Template.Delete(ctx, owner, req.GetTemplateId()); err != nil {
 		return nil, mapErr(err)
 	}
 	return &journeyv1.DeleteTemplateResponse{}, nil
@@ -279,10 +271,11 @@ func (s *JourneyServer) ListFavoritePlaces(ctx context.Context, _ *journeyv1.Lis
 
 // RemoveFavoritePlace implements JourneyService.
 func (s *JourneyServer) RemoveFavoritePlace(ctx context.Context, req *journeyv1.RemoveFavoritePlaceRequest) (*journeyv1.RemoveFavoritePlaceResponse, error) {
-	if _, err := ownerFromCtx(ctx); err != nil {
+	owner, err := ownerFromCtx(ctx)
+	if err != nil {
 		return nil, err
 	}
-	if err := s.d.Favorite.Remove(ctx, req.GetPlaceId()); err != nil {
+	if err := s.d.Favorite.Remove(ctx, owner, req.GetPlaceId()); err != nil {
 		return nil, mapErr(err)
 	}
 	return &journeyv1.RemoveFavoritePlaceResponse{}, nil

@@ -95,4 +95,11 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.appauth)
+    implementation(libs.exifinterface)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    implementation(libs.work.runtime.ktx)
 }

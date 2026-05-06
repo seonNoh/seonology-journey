@@ -76,6 +76,15 @@ fun JourneyApp() {
         }
     }
 
+    // Kick off one-shot sync on cold start and keep a periodic schedule
+    // alive. Both are idempotent — WorkManager de-dupes.
+    LaunchedEffect(authed) {
+        if (authed) {
+            com.seonology.journey.sync.SyncWorker.enqueueOneShot(context)
+            com.seonology.journey.sync.SyncWorker.enqueuePeriodic(context)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

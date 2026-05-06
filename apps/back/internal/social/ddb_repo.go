@@ -117,12 +117,14 @@ func (r *CompanionDDBRepo) DeleteByTrip(ctx context.Context, tripID string) erro
 	if err != nil {
 		return err
 	}
-	for _, c := range companions {
-		if err := r.Delete(ctx, tripID, c.GetMemberId()); err != nil {
-			return err
-		}
+	if len(companions) == 0 {
+		return nil
 	}
-	return nil
+	sks := make([]string, 0, len(companions))
+	for _, c := range companions {
+		sks = append(sks, "COMPANION#"+c.GetMemberId())
+	}
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }
 
 func companionFromItem(it companionItem) *journeyv1.Companion {
@@ -140,6 +142,12 @@ func companionFromItem(it companionItem) *journeyv1.Companion {
 }
 
 // ─── Tag DDB ─────────────────────────────────────────────────────────────────
+//
+// Tags live in a single table. Tag bodies live under the user partition
+// and trip↔tag associations under the trip partition, both with SK prefix
+// TAG# so a single table serves both lookups without a GSI. The trip-side
+// row denormalizes name/color so ListByTrip needs a single Query and no
+// per-tag follow-up reads.
 
 type tagItem struct {
 	PK     string `dynamodbav:"PK"` // USER#<userID>
@@ -150,20 +158,23 @@ type tagItem struct {
 	Color  string `dynamodbav:"color,omitempty"`
 }
 
+// tagTripItem is a denormalized association row.
 type tagTripItem struct {
-	PK    string `dynamodbav:"PK"` // TRIP#<tripID>
-	SK    string `dynamodbav:"SK"` // TAG#<tagID>
-	TagID string `dynamodbav:"tagId"`
+	PK     string `dynamodbav:"PK"` // TRIP#<tripID>
+	SK     string `dynamodbav:"SK"` // TAG#<tagID>
+	TagID  string `dynamodbav:"tagId"`
+	UserID string `dynamodbav:"userId"`
+	Name   string `dynamodbav:"name"`
+	Color  string `dynamodbav:"color,omitempty"`
 }
 
 type TagDDBRepo struct {
-	client   *dynamodb.Client
-	table    string
-	relTable string
+	client *dynamodb.Client
+	table  string
 }
 
 func NewTagDDBRepo(client *dynamodb.Client) *TagDDBRepo {
-	return &TagDDBRepo{client: client, table: ddb.TableName("tags"), relTable: ddb.TableName("tag-trips")}
+	return &TagDDBRepo{client: client, table: ddb.TableName("tags")}
 }
 
 func (r *TagDDBRepo) Save(ctx context.Context, t *journeyv1.Tag) error {
@@ -179,25 +190,22 @@ func (r *TagDDBRepo) Save(ctx context.Context, t *journeyv1.Tag) error {
 	return err
 }
 
-func (r *TagDDBRepo) Get(ctx context.Context, id string) (*journeyv1.Tag, error) {
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("TAG#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
+func (r *TagDDBRepo) Get(ctx context.Context, userID, id string) (*journeyv1.Tag, error) {
+	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(r.table),
+		Key: map[string]types.AttributeValue{
+			"PK": &types.AttributeValueMemberS{Value: "USER#" + userID},
+			"SK": &types.AttributeValueMemberS{Value: "TAG#" + id},
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(out.Items) == 0 {
+	if out.Item == nil {
 		return nil, ErrNotFound
 	}
 	var it tagItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(out.Item, &it); err != nil {
 		return nil, err
 	}
 	return &journeyv1.Tag{Id: it.ID, UserId: it.UserID, Name: it.Name, Color: it.Color}, nil
@@ -227,34 +235,34 @@ func (r *TagDDBRepo) ListByUser(ctx context.Context, userID string) ([]*journeyv
 	return results, nil
 }
 
-func (r *TagDDBRepo) Delete(ctx context.Context, id string) error {
-	t, err := r.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+func (r *TagDDBRepo) Delete(ctx context.Context, userID, id string) error {
+	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName: aws.String(r.table),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: "USER#" + t.GetUserId()},
+			"PK": &types.AttributeValueMemberS{Value: "USER#" + userID},
 			"SK": &types.AttributeValueMemberS{Value: "TAG#" + id},
 		},
 	})
 	return err
 }
 
-func (r *TagDDBRepo) Attach(ctx context.Context, tripID, tagID string) error {
-	it := tagTripItem{PK: "TRIP#" + tripID, SK: "TAG#" + tagID, TagID: tagID}
+// Attach writes a denormalized trip↔tag association row.
+func (r *TagDDBRepo) Attach(ctx context.Context, tripID string, tag *journeyv1.Tag) error {
+	it := tagTripItem{
+		PK: "TRIP#" + tripID, SK: "TAG#" + tag.GetId(),
+		TagID: tag.GetId(), UserID: tag.GetUserId(), Name: tag.GetName(), Color: tag.GetColor(),
+	}
 	av, err := attributevalue.MarshalMap(it)
 	if err != nil {
 		return err
 	}
-	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{TableName: aws.String(r.relTable), Item: av})
+	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{TableName: aws.String(r.table), Item: av})
 	return err
 }
 
 func (r *TagDDBRepo) Detach(ctx context.Context, tripID, tagID string) error {
 	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.relTable),
+		TableName: aws.String(r.table),
 		Key: map[string]types.AttributeValue{
 			"PK": &types.AttributeValueMemberS{Value: "TRIP#" + tripID},
 			"SK": &types.AttributeValueMemberS{Value: "TAG#" + tagID},
@@ -268,7 +276,7 @@ func (r *TagDDBRepo) ListByTrip(ctx context.Context, tripID string) ([]*journeyv
 		And(expression.Key("SK").BeginsWith("TAG#"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.relTable),
+		TableName:                 aws.String(r.table),
 		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -282,11 +290,9 @@ func (r *TagDDBRepo) ListByTrip(ctx context.Context, tripID string) ([]*journeyv
 		if err := attributevalue.UnmarshalMap(item, &rel); err != nil {
 			continue
 		}
-		tag, err := r.Get(ctx, rel.TagID)
-		if err != nil {
-			continue
-		}
-		results = append(results, tag)
+		results = append(results, &journeyv1.Tag{
+			Id: rel.TagID, UserId: rel.UserID, Name: rel.Name, Color: rel.Color,
+		})
 	}
 	return results, nil
 }
@@ -296,7 +302,7 @@ func (r *TagDDBRepo) DetachAllFromTrip(ctx context.Context, tripID string) error
 		And(expression.Key("SK").BeginsWith("TAG#"))
 	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.relTable),
+		TableName:                 aws.String(r.table),
 		KeyConditionExpression:    expr.KeyCondition(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -304,14 +310,18 @@ func (r *TagDDBRepo) DetachAllFromTrip(ctx context.Context, tripID string) error
 	if err != nil {
 		return err
 	}
+	if len(out.Items) == 0 {
+		return nil
+	}
+	sks := make([]string, 0, len(out.Items))
 	for _, item := range out.Items {
 		var rel tagTripItem
 		if err := attributevalue.UnmarshalMap(item, &rel); err != nil {
 			continue
 		}
-		_ = r.Detach(ctx, tripID, rel.TagID)
+		sks = append(sks, "TAG#"+rel.TagID)
 	}
-	return nil
+	return ddb.BatchDelete(ctx, r.client, r.table, ddb.BatchDeletePK("TRIP#"+tripID, sks))
 }
 
 // ─── Template DDB ────────────────────────────────────────────────────────────
@@ -354,25 +364,22 @@ func (r *TemplateDDBRepo) Save(ctx context.Context, t *journeyv1.Template) error
 	return err
 }
 
-func (r *TemplateDDBRepo) Get(ctx context.Context, id string) (*journeyv1.Template, error) {
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("TEMPLATE#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
+func (r *TemplateDDBRepo) Get(ctx context.Context, userID, id string) (*journeyv1.Template, error) {
+	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(r.table),
+		Key: map[string]types.AttributeValue{
+			"PK": &types.AttributeValueMemberS{Value: "USER#" + userID},
+			"SK": &types.AttributeValueMemberS{Value: "TEMPLATE#" + id},
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(out.Items) == 0 {
+	if out.Item == nil {
 		return nil, ErrNotFound
 	}
 	var it templateItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
+	if err := attributevalue.UnmarshalMap(out.Item, &it); err != nil {
 		return nil, err
 	}
 	return templateFromItem(it), nil
@@ -402,15 +409,11 @@ func (r *TemplateDDBRepo) ListByUser(ctx context.Context, userID string) ([]*jou
 	return results, nil
 }
 
-func (r *TemplateDDBRepo) Delete(ctx context.Context, id string) error {
-	t, err := r.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+func (r *TemplateDDBRepo) Delete(ctx context.Context, userID, id string) error {
+	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName: aws.String(r.table),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: "USER#" + t.GetUserId()},
+			"PK": &types.AttributeValueMemberS{Value: "USER#" + userID},
 			"SK": &types.AttributeValueMemberS{Value: "TEMPLATE#" + id},
 		},
 	})
@@ -428,6 +431,8 @@ func templateFromItem(it templateItem) *journeyv1.Template {
 }
 
 // ─── Favorite DDB ────────────────────────────────────────────────────────────
+//
+// Uses the actually-deployed table name `favorite-places`.
 
 type favoriteItem struct {
 	PK            string  `dynamodbav:"PK"` // USER#<userID>
@@ -449,7 +454,7 @@ type FavoriteDDBRepo struct {
 }
 
 func NewFavoriteDDBRepo(client *dynamodb.Client) *FavoriteDDBRepo {
-	return &FavoriteDDBRepo{client: client, table: ddb.TableName("favorites")}
+	return &FavoriteDDBRepo{client: client, table: ddb.TableName("favorite-places")}
 }
 
 func (r *FavoriteDDBRepo) Save(ctx context.Context, p *journeyv1.FavoritePlace) error {
@@ -498,32 +503,11 @@ func (r *FavoriteDDBRepo) ListByUser(ctx context.Context, userID string) ([]*jou
 	return results, nil
 }
 
-func (r *FavoriteDDBRepo) Delete(ctx context.Context, id string) error {
-	// Need userID to construct key; use GSI1 lookup
-	keyCond := expression.Key("GSI1PK").Equal(expression.Value("FAVORITE#" + id))
-	expr, _ := expression.NewBuilder().WithKeyCondition(keyCond).Build()
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:                 aws.String(r.table),
-		IndexName:                 aws.String("GSI1"),
-		KeyConditionExpression:    expr.KeyCondition(),
-		ExpressionAttributeNames:  expr.Names(),
-		ExpressionAttributeValues: expr.Values(),
-		Limit:                     aws.Int32(1),
-	})
-	if err != nil {
-		return err
-	}
-	if len(out.Items) == 0 {
-		return ErrNotFound
-	}
-	var it favoriteItem
-	if err := attributevalue.UnmarshalMap(out.Items[0], &it); err != nil {
-		return err
-	}
-	_, err = r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+func (r *FavoriteDDBRepo) Delete(ctx context.Context, userID, id string) error {
+	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
 		TableName: aws.String(r.table),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: "USER#" + it.UserID},
+			"PK": &types.AttributeValueMemberS{Value: "USER#" + userID},
 			"SK": &types.AttributeValueMemberS{Value: "FAVORITE#" + id},
 		},
 	})
@@ -548,7 +532,7 @@ func favoriteFromItem(it favoriteItem) *journeyv1.FavoritePlace {
 
 type shareItem struct {
 	PK         string `dynamodbav:"PK"` // SHARE#<code>
-	SK         string `dynamodbav:"SK"` // SHARE#<code>
+	SK         string `dynamodbav:"SK"` // METADATA (constant; one row per code)
 	Code       string `dynamodbav:"code"`
 	TripID     string `dynamodbav:"tripId"`
 	Permission int32  `dynamodbav:"permission"`
@@ -556,6 +540,12 @@ type shareItem struct {
 	CreatedAt  string `dynamodbav:"createdAt"`
 	UpdatedAt  string `dynamodbav:"updatedAt"`
 }
+
+// shareMetadataSK is a constant SK used for the single row representing a
+// share code. Previously we stored SK = PK which wastes WCU / storage for
+// no benefit; we migrate writes to METADATA and keep Get/Delete resilient
+// via a fallback lookup for legacy rows.
+const shareMetadataSK = "METADATA"
 
 type ShareDDBRepo struct {
 	client *dynamodb.Client
@@ -568,7 +558,7 @@ func NewShareDDBRepo(client *dynamodb.Client) *ShareDDBRepo {
 
 func (r *ShareDDBRepo) Save(ctx context.Context, s *journeyv1.Share) error {
 	it := shareItem{
-		PK: "SHARE#" + s.GetCode(), SK: "SHARE#" + s.GetCode(),
+		PK: "SHARE#" + s.GetCode(), SK: shareMetadataSK,
 		Code: s.GetCode(), TripID: s.GetTripId(),
 		Permission: int32(s.GetPermission()),
 	}
@@ -587,36 +577,61 @@ func (r *ShareDDBRepo) Save(ctx context.Context, s *journeyv1.Share) error {
 	return err
 }
 
+// Get tries METADATA SK first, then falls back to legacy SK = PK layout.
 func (r *ShareDDBRepo) Get(ctx context.Context, code string) (*journeyv1.Share, error) {
+	item, err := r.getWithSK(ctx, code, shareMetadataSK)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil {
+		// Fallback for rows written with the old SK = PK pattern.
+		item, err = r.getWithSK(ctx, code, "SHARE#"+code)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if item == nil {
+		return nil, ErrNotFound
+	}
+	return shareFromItem(*item), nil
+}
+
+func (r *ShareDDBRepo) getWithSK(ctx context.Context, code, sk string) (*shareItem, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(r.table),
 		Key: map[string]types.AttributeValue{
 			"PK": &types.AttributeValueMemberS{Value: "SHARE#" + code},
-			"SK": &types.AttributeValueMemberS{Value: "SHARE#" + code},
+			"SK": &types.AttributeValueMemberS{Value: sk},
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
 	if out.Item == nil {
-		return nil, ErrNotFound
+		return nil, nil
 	}
 	var it shareItem
 	if err := attributevalue.UnmarshalMap(out.Item, &it); err != nil {
 		return nil, err
 	}
-	return shareFromItem(it), nil
+	return &it, nil
 }
 
+// Delete removes both the new METADATA row and any legacy SK = PK row.
 func (r *ShareDDBRepo) Delete(ctx context.Context, code string) error {
-	_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(r.table),
-		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: "SHARE#" + code},
-			"SK": &types.AttributeValueMemberS{Value: "SHARE#" + code},
-		},
-	})
-	return err
+	for _, sk := range []string{shareMetadataSK, "SHARE#" + code} {
+		_, err := r.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+			TableName: aws.String(r.table),
+			Key: map[string]types.AttributeValue{
+				"PK": &types.AttributeValueMemberS{Value: "SHARE#" + code},
+				"SK": &types.AttributeValueMemberS{Value: sk},
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func shareFromItem(it shareItem) *journeyv1.Share {
