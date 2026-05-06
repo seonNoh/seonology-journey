@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Seonology Journey — Bear Mascot Candidates</title>
+<meta name="viewport" content="width=1600" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #efeae0; font-family: 'Gowun Dodum', 'Quicksand', system-ui, sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="android-frame.jsx"></script>
+<script type="text/babel" src="bear-mascot.jsx"></script>
+<script type="text/babel" src="variants.jsx"></script>
+
+<script type="text/babel">
+function PhonePreview({ render }) {
+  return (
+    <div style={{ position: 'relative', width: 412, height: 892,
+      borderRadius: 36, overflow: 'hidden',
+      border: '8px solid rgba(116,119,117,0.5)',
+      background: '#fff',
+      boxShadow: '0 30px 80px rgba(0,0,0,0.18)' }}>
+      {/* status bar (compact) */}
+      <div style={{ height: 36, position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 18px', fontSize: 13, fontWeight: 600, color: '#3B2A20',
+        background: 'transparent', zIndex: 2,
+      }}>
+        <span>9:30</span>
+        <div style={{ position: 'absolute', left: '50%', top: 8, transform: 'translateX(-50%)',
+          width: 22, height: 22, borderRadius: 99, background: '#2e2e2e' }} />
+        <span style={{ fontSize: 11 }}>● ▲ ▮</span>
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}>
+        <div style={{ paddingTop: 36, height: '100%', overflow: 'hidden' }}>
+          {render()}
+        </div>
+      </div>
+      {/* gesture pill */}
+      <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+        width: 108, height: 4, borderRadius: 99, background: 'rgba(59,42,32,0.4)' }} />
+    </div>
+  );
+}
+
+function PaletteSwatches({ palette, swatches }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {swatches.map((c, i) => (
+        <div key={i} style={{ width: 22, height: 22, borderRadius: 6, background: c,
+          border: '1.2px solid rgba(0,0,0,0.08)' }} />
+      ))}
+    </div>
+  );
+}
+
+const SWATCHES = {
+  honey:  ['#FBF3E4', '#E89A3C', '#E9C9A0', '#3B2A20'],
+  milk:   ['#FAF6F1', '#6B4427', '#D9B795', '#2C1F17'],
+  cafe:   ['#F2E8D5', '#8B3A2B', '#D4A574', '#3B2A20'],
+  sakura: ['#FFF5F7', '#F25C7A', '#F4D6B8', '#601C29'],
+  forest: ['#F2EFE4', '#5C7A3C', '#D4A23B', '#2E3924'],
+};
+
+function Header() {
+  return (
+    <div style={{ padding: '28px 36px 12px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 12, color: '#8A7560', letterSpacing: 2, fontWeight: 700 }}>SEONOLOGY JOURNEY · 디자인 후보</div>
+        <h1 style={{ margin: '6px 0 0', fontSize: 30, color: '#3B2A20' }}>곰 마스코트 컨셉 5종</h1>
+        <p style={{ margin: '6px 0 0', color: '#8A7560', fontSize: 13, maxWidth: 720 }}>
+          기존 사쿠라/스카이 팔레트와 Trip → Day → 일정/식사/숙소/메모/지출 IA를 그대로 유지하면서,
+          마스코트·컬러·카드 톤만 바꾼 5가지 방향. 캐릭터는 모두 오리지널 곰돌이로 그렸어요
+          (특정 IP 캐릭터의 직접 재현은 피했습니다).
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ArtboardLabel({ v }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span>{v.name}</span>
+      <span style={{ fontSize: 11, color: '#8A7560', fontWeight: 500 }}>· {v.subtitle}</span>
+      <span style={{ marginLeft: 'auto' }}>
+        <PaletteSwatches swatches={SWATCHES[v.id]} />
+      </span>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Seonology Journey · Bear Mascot 후보"
+      subtitle="홈/트립 리스트 화면 5안 — 가로로 비교"
+      background="#efeae0"
+    >
+      <DCSection id="home" title="홈 · Trip List 5안" subtitle="412 × 892 (Pixel 기준)">
+        {VARIANTS.map(v => (
+          <DCArtboard
+            key={v.id}
+            id={v.id}
+            label={`${v.name} — ${v.subtitle}`}
+            width={460}
+            height={960}
+          >
+            <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+              <PhonePreview render={v.render} />
+            </div>
+          </DCArtboard>
+        ))}
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

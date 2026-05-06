@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Seonology Journey — Sakura Bear</title>
+<meta name="viewport" content="width=1700" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #fbf3ee;
+    font-family: 'Gowun Dodum', 'Quicksand', system-ui, sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font-family: inherit; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="sakura-bear-mascot.jsx"></script>
+<script type="text/babel" src="sakura-bear-system.jsx"></script>
+<script type="text/babel" src="sakura-bear-screens.jsx"></script>
+
+<script type="text/babel">
+function PhonePreview({ children }) {
+  return (
+    <div style={{ position: 'relative', width: 412, height: 892,
+      borderRadius: 38, overflow: 'hidden',
+      border: '8px solid rgba(116,119,117,0.5)',
+      background: '#fff',
+      boxShadow: '0 30px 80px rgba(96,28,41,0.18)' }}>
+      {/* status bar */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 36, zIndex: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 18px', fontSize: 13, fontWeight: 600, color: SB.s900,
+        pointerEvents: 'none',
+      }}>
+        <span>9:30</span>
+        <div style={{ position: 'absolute', left: '50%', top: 8, transform: 'translateX(-50%)',
+          width: 22, height: 22, borderRadius: 99, background: '#2e2e2e' }} />
+        <span style={{ fontSize: 11 }}>● ▲ ▮</span>
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
+        paddingTop: 36 }}>
+        <div style={{ height: '100%', overflow: 'hidden' }}>{children}</div>
+      </div>
+      <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+        width: 108, height: 4, borderRadius: 99, background: 'rgba(96,28,41,0.4)', zIndex: 11 }}/>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Seonology Journey · Sakura Bear"
+      subtitle="기존 사쿠라 팔레트 + 곰 마스코트 — 6 화면 셋"
+      background="#fbf3ee"
+    >
+      <DCSection id="screens" title="Core 화면 6종" subtitle="412 × 892 (Pixel 기준)">
+        <DCArtboard id="login" label="01 · Login (시작 화면)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenLogin/></PhonePreview>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="home" label="02 · Trip List (홈)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenTripList/></PhonePreview>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="trip" label="03 · Trip Detail (여행 상세)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenTripDetail/></PhonePreview>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="day" label="04 · Day Detail (일자 상세)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenDayDetail/></PhonePreview>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="notes" label="05 · Notes (메모)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenNotes/></PhonePreview>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="expenses" label="06 · Expenses (지출)" width={460} height={960}>
+          <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
+            <PhonePreview><ScreenExpenses/></PhonePreview>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

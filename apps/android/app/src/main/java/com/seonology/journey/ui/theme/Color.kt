@@ -42,3 +42,53 @@ val Warm900 = Color(0xFF1C1917)
 val ErrorRed = Color(0xFFEF4444)
 val WarningAmber = Color(0xFFF59E0B)
 val SuccessGreen = Color(0xFF10B981)
+val SuccessBg = Color(0xFFD1FAE5)
+val WarningBg = Color(0xFFFEF3C7)
+
+// Sakura Bear theme cream/beige tones (mascot palette).
+val SbCream = Color(0xFFFFFBF5)
+val SbBeige = Color(0xFFFBF0E0)
+val SbBeigeIn = Color(0xFFF4D6B8)
+
+// Mascot palette — main bear (beige).
+val MascotBearFur = Color(0xFFF4D6B8)
+val MascotBearEar = Color(0xFFD9A179)
+val MascotBearSnout = Color(0xFFFBEAD5)
+val MascotBearOutline = Color(0xFF5A2230)
+val MascotBearCheek = Color(0xFFFFB3C7)
+
+// Mascot palette — mini bear (small brown).
+val MascotMiniFur = Color(0xFFB07A56)
+val MascotMiniEar = Color(0xFF7E4F33)
+val MascotMiniSnout = Color(0xFFE8C9B0)
+val MascotMiniOutline = Color(0xFF3B1F1A)
+val MascotMiniCheek = Color(0xFFFFB3C7)
+
+// Mascot palette — chick (yellow).
+val MascotChickBody = Color(0xFFFFD66B)
+val MascotChickBeak = Color(0xFFE89A3C)
+val MascotChickOutline = Color(0xFF5A2230)
+
+// Mood colors used in notes.
+val MoodExcited = Color(0xFFF25C7A)     // 설렘
+val MoodExcitedBg = Sakura100
+val MoodTasty = Color(0xFFD97706)       // 맛있음
+val MoodTastyBg = Color(0xFFFED7AA)
+val MoodCalm = Color(0xFF0EA5E9)        // 평온
+val MoodCalmBg = Sky100
+val MoodTired = Color(0xFF7C3AED)       // 피곤
+val MoodTiredBg = Color(0xFFEDE9FE)
+
+// Expense category colors (food/lodging/activity/shopping/etc).
+val CatTransport = Sky500
+val CatTransportBg = Sky100
+val CatFood = Color(0xFFD97706)
+val CatFoodBg = Color(0xFFFED7AA)
+val CatLodging = Sakura600
+val CatLodgingBg = Sakura100
+val CatActivity = Color(0xFF7C3AED)
+val CatActivityBg = Color(0xFFEDE9FE)
+val CatShopping = Color(0xFF059669)
+val CatShoppingBg = Color(0xFFD1FAE5)
+val CatOther = Warm500
+val CatOtherBg = Warm100
