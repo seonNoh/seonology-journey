@@ -16,7 +16,8 @@ def get_client():
     return boto3.client("dynamodb", region_name=REGION)
 
 
-def put_trip(c, trip_id, title, description, start_date, end_date, status="completed"):
+def put_trip(c, trip_id, title, description, start_date, end_date, status=3):
+    """status: 1=planning, 2=ongoing, 3=completed"""
     c.put_item(
         TableName=f"{TABLE_PREFIX}trips",
         Item={
@@ -31,7 +32,7 @@ def put_trip(c, trip_id, title, description, start_date, end_date, status="compl
             "description": {"S": description},
             "startDate": {"S": start_date},
             "endDate": {"S": end_date},
-            "status": {"S": status},
+            "status": {"N": str(status)},
             "visibility": {"S": "private"},
             "totalBudget": {"N": "0"},
             "createdAt": {"S": NOW},
