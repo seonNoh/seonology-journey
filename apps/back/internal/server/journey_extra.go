@@ -2,6 +2,12 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -119,14 +125,162 @@ func (s *JourneyServer) GetYearlyStatistics(ctx context.Context, req *journeyv1.
 
 // === External (stubs) ===
 
+// === External (geocoding via OpenStreetMap Nominatim) ===
+
+// nominatimClient holds a shared HTTP client used for Nominatim calls.
+// Nominatim의 사용 정책상 user-agent 명시와 1 req/sec 정도의 트래픽 제한이
+// 권장된다. 우리 서비스에서는 사용자 입력 typeahead로 호출되므로 클라이언트
+// 측에서 디바운스를 둔다.
+var nominatimClient = &http.Client{Timeout: 6 * time.Second}
+
+const nominatimUA = "seonology-journey/1.0 (+https://github.com/seonNoh/seonology-journey)"
+
+type nominatimItem struct {
+	PlaceID     int64  `json:"place_id"`
+	OSMID       int64  `json:"osm_id"`
+	OSMType     string `json:"osm_type"`
+	DisplayName string `json:"display_name"`
+	Lat         string `json:"lat"`
+	Lon         string `json:"lon"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Class       string `json:"class"`
+	Address     struct {
+		Name        string `json:"name"`
+		Amenity     string `json:"amenity"`
+		Shop        string `json:"shop"`
+		Tourism     string `json:"tourism"`
+		Attraction  string `json:"attraction"`
+		Restaurant  string `json:"restaurant"`
+		Hotel       string `json:"hotel"`
+		Road        string `json:"road"`
+		Suburb      string `json:"suburb"`
+		City        string `json:"city"`
+		Town        string `json:"town"`
+		Village     string `json:"village"`
+		County      string `json:"county"`
+		State       string `json:"state"`
+		Country     string `json:"country"`
+		CountryCode string `json:"country_code"`
+		Postcode    string `json:"postcode"`
+	} `json:"address"`
+}
+
+func (n *nominatimItem) bestName() string {
+	candidates := []string{
+		n.Name,
+		n.Address.Name,
+		n.Address.Amenity,
+		n.Address.Shop,
+		n.Address.Tourism,
+		n.Address.Attraction,
+		n.Address.Restaurant,
+		n.Address.Hotel,
+	}
+	for _, c := range candidates {
+		if c != "" {
+			return c
+		}
+	}
+	if n.DisplayName != "" {
+		// "Cafe ABC, Road, City, Country" 형태에서 첫 토큰을 이름으로 사용.
+		if i := strings.Index(n.DisplayName, ","); i > 0 {
+			return strings.TrimSpace(n.DisplayName[:i])
+		}
+		return n.DisplayName
+	}
+	return ""
+}
+
+func (n *nominatimItem) toProto() *journeyv1.GeocodePlace {
+	lat, _ := strconv.ParseFloat(n.Lat, 64)
+	lon, _ := strconv.ParseFloat(n.Lon, 64)
+	pid := fmt.Sprintf("osm:%s/%d", n.OSMType, n.OSMID)
+	if n.OSMType == "" || n.OSMID == 0 {
+		pid = fmt.Sprintf("nominatim:%d", n.PlaceID)
+	}
+	return &journeyv1.GeocodePlace{
+		PlaceId:  pid,
+		Name:     n.bestName(),
+		Address:  n.DisplayName,
+		Location: &journeyv1.GeoPoint{Latitude: lat, Longitude: lon},
+	}
+}
+
+func nominatimDo(ctx context.Context, path string, q url.Values) ([]nominatimItem, error) {
+	q.Set("format", "jsonv2")
+	q.Set("addressdetails", "1")
+	endpoint := "https://nominatim.openstreetmap.org" + path + "?" + q.Encode()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", nominatimUA)
+	req.Header.Set("Accept-Language", "ja,ko,en")
+	resp, err := nominatimClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		return nil, fmt.Errorf("nominatim http %d", resp.StatusCode)
+	}
+	// /search 는 배열, /reverse 는 단일 객체이므로 호출처가 분기한다.
+	if strings.HasPrefix(path, "/reverse") {
+		var single nominatimItem
+		if err := json.NewDecoder(resp.Body).Decode(&single); err != nil {
+			return nil, err
+		}
+		return []nominatimItem{single}, nil
+	}
+	var items []nominatimItem
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 // Geocode implements JourneyService.
-func (s *JourneyServer) Geocode(_ context.Context, _ *journeyv1.GeocodeRequest) (*journeyv1.GeocodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "geocode not configured")
+//
+// OpenStreetMap Nominatim 공개 엔드포인트를 사용한다. 키가 필요 없고 일본/한국
+// 주소·POI 검색이 모두 가능하다. 사용량이 늘면 추후 자체 호스팅 또는
+// Google Places API 로 교체한다.
+func (s *JourneyServer) Geocode(ctx context.Context, req *journeyv1.GeocodeRequest) (*journeyv1.GeocodeResponse, error) {
+	q := strings.TrimSpace(req.GetQuery())
+	if q == "" {
+		return &journeyv1.GeocodeResponse{}, nil
+	}
+	values := url.Values{}
+	values.Set("q", q)
+	values.Set("limit", "8")
+	items, err := nominatimDo(ctx, "/search", values)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "geocode upstream: %v", err)
+	}
+	out := make([]*journeyv1.GeocodePlace, 0, len(items))
+	for i := range items {
+		out = append(out, items[i].toProto())
+	}
+	return &journeyv1.GeocodeResponse{Places: out}, nil
 }
 
 // ReverseGeocode implements JourneyService.
-func (s *JourneyServer) ReverseGeocode(_ context.Context, _ *journeyv1.ReverseGeocodeRequest) (*journeyv1.ReverseGeocodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "reverse geocode not configured")
+func (s *JourneyServer) ReverseGeocode(ctx context.Context, req *journeyv1.ReverseGeocodeRequest) (*journeyv1.ReverseGeocodeResponse, error) {
+	loc := req.GetLocation()
+	if loc == nil {
+		return nil, status.Error(codes.InvalidArgument, "location required")
+	}
+	values := url.Values{}
+	values.Set("lat", strconv.FormatFloat(loc.GetLatitude(), 'f', 7, 64))
+	values.Set("lon", strconv.FormatFloat(loc.GetLongitude(), 'f', 7, 64))
+	items, err := nominatimDo(ctx, "/reverse", values)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "reverse geocode upstream: %v", err)
+	}
+	if len(items) == 0 {
+		return &journeyv1.ReverseGeocodeResponse{}, nil
+	}
+	return &journeyv1.ReverseGeocodeResponse{Place: items[0].toProto()}, nil
 }
 
 // GetExchangeRate implements JourneyService - 정적 stub (KRW->JPY=0.11 등).

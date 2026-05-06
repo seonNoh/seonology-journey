@@ -28,6 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { api } from '../lib/api'
 import { MapPicker } from '../components/MapPicker'
+import { PlaceSearchInput } from '../components/PlaceSearchInput'
 import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
 import type {
   Accommodation,
@@ -276,10 +277,14 @@ function CreateScheduleModal({
               onChange={(v) => setForm({ ...form, endTime: v })}
             />
           </div>
-          <Field
+          <PlaceSearchInput
             label="장소"
             value={form.placeName}
             onChange={(v) => setForm({ ...form, placeName: v })}
+            onSelect={(p) => {
+              setForm({ ...form, placeName: p.name })
+              setLocation(p.location)
+            }}
           />
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">위치 선택</label>
@@ -510,10 +515,12 @@ function MealEditModal({
               ))}
             </select>
           </label>
-          <Field
+          <PlaceSearchInput
             label="식당"
             value={form.restaurantName}
             onChange={(v) => setForm({ ...form, restaurantName: v })}
+            onSelect={(p) => setForm({ ...form, restaurantName: p.name })}
+            placeholder="식당 검색"
           />
           <Field label="메뉴" value={form.menu} onChange={(v) => setForm({ ...form, menu: v })} />
           <div className="grid grid-cols-2 gap-2">
@@ -692,11 +699,12 @@ function AccommodationEditModal({
             })
           }}
         >
-          <Field
+          <PlaceSearchInput
             label="숙소명"
-            required
             value={form.name}
             onChange={(v) => setForm({ ...form, name: v })}
+            onSelect={(p) => setForm({ ...form, name: p.name, address: p.address })}
+            placeholder="호텔/료칸 검색"
           />
           <Field
             label="주소"

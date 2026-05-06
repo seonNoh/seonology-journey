@@ -36,6 +36,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -80,8 +81,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -90,11 +93,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import com.seonology.journey.auth.AuthStore
 import com.seonology.journey.auth.KeycloakAuth
 import com.seonology.journey.data.Accommodation
+import com.seonology.journey.data.CreateScheduleRequest
+import com.seonology.journey.data.CreateTripRequest
 import com.seonology.journey.data.Day
 import com.seonology.journey.data.Expense
+import com.seonology.journey.data.GeoPoint
 import com.seonology.journey.data.JourneyApi
 import com.seonology.journey.data.Meal
 import com.seonology.journey.data.Network
@@ -103,6 +110,7 @@ import com.seonology.journey.data.Schedule
 import com.seonology.journey.data.Trip
 import com.seonology.journey.ui.components.MascotAccessory
 import com.seonology.journey.ui.components.MascotExpression
+import com.seonology.journey.ui.components.PlaceSearchField
 import com.seonology.journey.ui.components.SbBear
 import com.seonology.journey.ui.components.SbChick
 import com.seonology.journey.ui.components.SbChip
@@ -199,9 +207,20 @@ fun JourneyApp() {
                 TripListScreen(
                     api = api,
                     onOpenTrip = { nav.navigate("trips/$it") },
+                    onCreateTrip = { nav.navigate("create-trip") },
                     onLogout = {
                         store.clear()
                         authed = false
+                    },
+                )
+            }
+            composable("create-trip") {
+                CreateTripScreen(
+                    api = api,
+                    onBack = { nav.popBackStack() },
+                    onCreated = { tripId ->
+                        nav.popBackStack()
+                        nav.navigate("trips/$tripId")
                     },
                 )
             }
@@ -222,6 +241,16 @@ fun JourneyApp() {
                     api = api,
                     dayId = dayId,
                     onBack = { nav.popBackStack() },
+                    onAddSchedule = { nav.navigate("days/$dayId/add-schedule") },
+                )
+            }
+            composable("days/{dayId}/add-schedule") { entry ->
+                val dayId = entry.arguments?.getString("dayId").orEmpty()
+                AddScheduleScreen(
+                    api = api,
+                    dayId = dayId,
+                    onBack = { nav.popBackStack() },
+                    onCreated = { nav.popBackStack() },
                 )
             }
             composable("trips/{tripId}/notes") { entry ->
@@ -405,6 +434,7 @@ private fun FloatingPetals(entries: List<PetalEntry>) {
 private fun TripListScreen(
     api: JourneyApi,
     onOpenTrip: (String) -> Unit,
+    onCreateTrip: () -> Unit,
     onLogout: () -> Unit,
 ) {
     var trips by remember { mutableStateOf<List<Trip>>(emptyList()) }
@@ -454,7 +484,7 @@ private fun TripListScreen(
                         item { NextTripHeroCard(upcoming, onClick = { onOpenTrip(upcoming.id) }) }
                         item {
                             QuickActionRow(
-                                onCreateTrip = { /* 새 여행 생성은 웹에서 처리 */ },
+                                onCreateTrip = onCreateTrip,
                                 onSchedule = { onOpenTrip(upcoming.id) },
                                 onMap = { /* 지도 탭은 추후 */ },
                                 onPhotos = { /* 사진 탭은 추후 */ },
@@ -640,7 +670,6 @@ private fun QuickActionRow(
                 .background(Sakura500)
                 .clickable {
                     onCreateTrip()
-                    notReady()
                 }
                 .padding(horizontal = 14.dp, vertical = 8.dp),
         ) {
@@ -1028,6 +1057,7 @@ private fun DayDetailScreen(
     api: JourneyApi,
     dayId: String,
     onBack: () -> Unit,
+    onAddSchedule: () -> Unit,
 ) {
     var schedules by remember { mutableStateOf<List<Schedule>>(emptyList()) }
     var meals by remember { mutableStateOf<List<Meal>>(emptyList()) }
@@ -1069,7 +1099,25 @@ private fun DayDetailScreen(
             ) {
                 DayHeaderCard()
 
-                SbSection(title = "일정", icon = Icons.Default.CalendarMonth, count = "${schedules.size}건")
+                SbSection(
+                    title = "일정",
+                    icon = Icons.Default.CalendarMonth,
+                    count = "${schedules.size}건",
+                    action = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(99.dp))
+                                .background(Sakura500)
+                                .clickable(onClick = onAddSchedule)
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("일정 추가", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                )
                 if (schedules.isEmpty()) EmptyCard("등록된 일정이 없습니다.")
                 else ScheduleTimeline(schedules)
 
@@ -1831,5 +1879,219 @@ private fun ErrorState(message: String) {
         )
         Spacer(Modifier.height(Spacing.xs))
         Text(message, fontSize = 12.sp, color = Warm500)
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Create Trip / Add Schedule (place search 연동)
+// ──────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun CreateTripScreen(
+    api: JourneyApi,
+    onBack: () -> Unit,
+    onCreated: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var title by remember { mutableStateOf("") }
+    var destination by remember { mutableStateOf("") }
+    var startDate by remember { mutableStateOf("") }
+    var endDate by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf("JPY") }
+    var submitting by remember { mutableStateOf(false) }
+
+    SakuraScaffold(title = "새 여행", onBack = onBack) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.base, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            SbField(label = "여행 제목", value = title, onChange = { title = it }, placeholder = "예: 도쿄 사쿠라 5일")
+            PlaceSearchField(
+                api = api,
+                label = "목적지",
+                value = destination,
+                onChange = { destination = it },
+                onSelect = { p -> destination = p.address.ifEmpty { p.name } },
+                placeholder = "도시 / 지역 검색 (예: 도쿄, 삿포로)",
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                SbField(label = "시작일", value = startDate, onChange = { startDate = it }, placeholder = "YYYY-MM-DD", modifier = Modifier.weight(1f))
+                SbField(label = "종료일", value = endDate, onChange = { endDate = it }, placeholder = "YYYY-MM-DD", modifier = Modifier.weight(1f))
+            }
+            SbField(label = "기준 통화", value = currency, onChange = { currency = it }, placeholder = "JPY / KRW / USD")
+
+            Spacer(Modifier.height(Spacing.sm))
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        Toast.makeText(context, "여행 제목을 입력해주세요", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    submitting = true
+                    scope.launch {
+                        runCatching {
+                            api.createTrip(
+                                CreateTripRequest(
+                                    title = title.trim(),
+                                    destination = destination.ifBlank { null },
+                                    startDate = startDate.ifBlank { null },
+                                    endDate = endDate.ifBlank { null },
+                                    budgetCurrency = currency.ifBlank { null },
+                                ),
+                            )
+                        }
+                            .onSuccess {
+                                Toast.makeText(context, "여행이 만들어졌어요", Toast.LENGTH_SHORT).show()
+                                onCreated(it.trip.id)
+                            }
+                            .onFailure { e ->
+                                Toast.makeText(context, "생성 실패: ${e.message}", Toast.LENGTH_LONG).show()
+                                submitting = false
+                            }
+                    }
+                },
+                enabled = !submitting,
+                colors = ButtonDefaults.buttonColors(containerColor = Sakura500, contentColor = Color.White),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (submitting) "만드는 중…" else "여행 만들기", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddScheduleScreen(
+    api: JourneyApi,
+    dayId: String,
+    onBack: () -> Unit,
+    onCreated: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var title by remember { mutableStateOf("") }
+    var startTime by remember { mutableStateOf("") }
+    var endTime by remember { mutableStateOf("") }
+    var placeName by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf<GeoPoint?>(null) }
+    var submitting by remember { mutableStateOf(false) }
+
+    SakuraScaffold(title = "일정 추가", onBack = onBack) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.base, vertical = Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            SbField(label = "제목", value = title, onChange = { title = it }, placeholder = "예: 센소지 참배")
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                SbField(label = "시작", value = startTime, onChange = { startTime = it }, placeholder = "HH:mm", modifier = Modifier.weight(1f))
+                SbField(label = "종료", value = endTime, onChange = { endTime = it }, placeholder = "HH:mm", modifier = Modifier.weight(1f))
+            }
+            PlaceSearchField(
+                api = api,
+                label = "장소",
+                value = placeName,
+                onChange = {
+                    placeName = it
+                    // 사용자가 직접 텍스트를 바꾸는 동안에는 좌표 무효화.
+                    location = null
+                },
+                onSelect = { p ->
+                    placeName = p.name
+                    location = p.location
+                },
+                placeholder = "식당 / 호텔 / 관광지 검색",
+            )
+            if (location != null) {
+                Text(
+                    "위치: %.5f, %.5f".format(location!!.latitude, location!!.longitude),
+                    fontSize = 11.sp,
+                    color = Warm500,
+                )
+            }
+            SbField(label = "메모", value = notes, onChange = { notes = it }, placeholder = "준비물, 주의사항 등")
+
+            Spacer(Modifier.height(Spacing.sm))
+            Button(
+                onClick = {
+                    if (title.isBlank()) {
+                        Toast.makeText(context, "제목을 입력해주세요", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    submitting = true
+                    scope.launch {
+                        runCatching {
+                            api.createSchedule(
+                                dayId,
+                                CreateScheduleRequest(
+                                    title = title.trim(),
+                                    startTime = startTime.ifBlank { null },
+                                    endTime = endTime.ifBlank { null },
+                                    placeName = placeName.ifBlank { null },
+                                    location = location,
+                                    notes = notes.ifBlank { null },
+                                ),
+                            )
+                        }
+                            .onSuccess {
+                                Toast.makeText(context, "일정이 추가됐어요", Toast.LENGTH_SHORT).show()
+                                onCreated()
+                            }
+                            .onFailure { e ->
+                                Toast.makeText(context, "추가 실패: ${e.message}", Toast.LENGTH_LONG).show()
+                                submitting = false
+                            }
+                    }
+                },
+                enabled = !submitting,
+                colors = ButtonDefaults.buttonColors(containerColor = Sakura500, contentColor = Color.White),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(if (submitting) "저장 중…" else "일정 저장", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SbField(
+    label: String,
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String = "",
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Sakura700)
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White)
+                .border(1.dp, Sakura100, RoundedCornerShape(12.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            if (value.isEmpty() && placeholder.isNotEmpty()) {
+                Text(placeholder, color = Warm500, fontSize = 13.sp)
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onChange,
+                singleLine = true,
+                textStyle = TextStyle(color = Sakura900, fontSize = 13.sp),
+                cursorBrush = SolidColor(Sakura500),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }

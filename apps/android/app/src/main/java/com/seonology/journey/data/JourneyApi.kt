@@ -64,6 +64,20 @@ data class Day(
 data class ListDaysResponse(val days: List<Day> = emptyList())
 
 @JsonClass(generateAdapter = true)
+data class GeoPoint(val latitude: Double = 0.0, val longitude: Double = 0.0)
+
+@JsonClass(generateAdapter = true)
+data class GeocodePlace(
+    val placeId: String = "",
+    val name: String = "",
+    val address: String = "",
+    val location: GeoPoint? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class GeocodeResponse(val places: List<GeocodePlace> = emptyList())
+
+@JsonClass(generateAdapter = true)
 data class Schedule(
     val id: String = "",
     val dayId: String = "",
@@ -72,9 +86,27 @@ data class Schedule(
     val startTime: String? = null,
     val endTime: String? = null,
     val placeName: String? = null,
+    val location: GeoPoint? = null,
     val notes: String? = null,
+    val region: String? = null,
+    val cost: Money? = null,
     val updatedAt: String? = null,
 )
+
+@JsonClass(generateAdapter = true)
+data class CreateScheduleRequest(
+    val title: String,
+    val startTime: String? = null,
+    val endTime: String? = null,
+    val placeName: String? = null,
+    val location: GeoPoint? = null,
+    val notes: String? = null,
+    val region: String? = null,
+    val cost: Money? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ScheduleEnvelope(val schedule: Schedule = Schedule())
 
 @JsonClass(generateAdapter = true)
 data class ListSchedulesResponse(val schedules: List<Schedule> = emptyList())
@@ -194,7 +226,13 @@ interface JourneyApi {
     suspend fun listSchedules(@Path("dayId") dayId: String): ListSchedulesResponse
 
     @POST("days/{dayId}/schedules")
-    suspend fun createSchedule(@Path("dayId") dayId: String, @Body body: Schedule): Schedule
+    suspend fun createSchedule(
+        @Path("dayId") dayId: String,
+        @Body body: CreateScheduleRequest,
+    ): ScheduleEnvelope
+
+    @DELETE("schedules/{scheduleId}")
+    suspend fun deleteSchedule(@Path("scheduleId") scheduleId: String)
 
     // Meals
     @GET("days/{dayId}/meals")
@@ -224,4 +262,8 @@ interface JourneyApi {
         @Query("cursor") cursor: String? = null,
         @Query("limit") limit: Int? = null,
     ): ListMediaResponse
+
+    // External - geocoding via OpenStreetMap Nominatim (백엔드 프록시)
+    @GET("external/geocode")
+    suspend fun geocode(@Query("q") query: String): GeocodeResponse
 }
