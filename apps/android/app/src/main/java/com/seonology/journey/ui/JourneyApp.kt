@@ -90,6 +90,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebSettings
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -233,6 +236,15 @@ fun JourneyApp() {
                     onOpenDay = { nav.navigate("days/$it") },
                     onOpenNotes = { nav.navigate("trips/$tripId/notes") },
                     onOpenExpenses = { nav.navigate("trips/$tripId/expenses") },
+                    onOpenMap = { nav.navigate("trips/$tripId/map") },
+                )
+            }
+            composable("trips/{tripId}/map") { entry ->
+                val tripId = entry.arguments?.getString("tripId").orEmpty()
+                TripMapScreen(
+                    api = api,
+                    tripId = tripId,
+                    onBack = { nav.popBackStack() },
                 )
             }
             composable("days/{dayId}") { entry ->
@@ -486,8 +498,6 @@ private fun TripListScreen(
                             QuickActionRow(
                                 onCreateTrip = onCreateTrip,
                                 onSchedule = { onOpenTrip(upcoming.id) },
-                                onMap = { /* 지도 탭은 추후 */ },
-                                onPhotos = { /* 사진 탭은 추후 */ },
                                 onNotes = { onOpenTrip(upcoming.id) },
                             )
                         }
@@ -642,18 +652,10 @@ private fun NextTripHeroCard(trip: Trip, onClick: () -> Unit) {
 private fun QuickActionRow(
     onCreateTrip: () -> Unit,
     onSchedule: () -> Unit,
-    onMap: () -> Unit,
-    onPhotos: () -> Unit,
     onNotes: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val notReady: () -> Unit = remember(context) {
-        { Toast.makeText(context, "준비 중인 기능이에요", Toast.LENGTH_SHORT).show() }
-    }
     val actions = listOf(
         QuickAction("일정", Icons.Default.CalendarMonth, onSchedule),
-        QuickAction("지도", Icons.Default.Place) { onMap(); notReady() },
-        QuickAction("사진", Icons.Default.CameraAlt) { onPhotos(); notReady() },
         QuickAction("메모", Icons.Default.Note, onNotes),
     )
     Row(
@@ -782,6 +784,7 @@ private fun TripDetailScreen(
     onOpenDay: (String) -> Unit,
     onOpenNotes: (String) -> Unit,
     onOpenExpenses: (String) -> Unit,
+    onOpenMap: () -> Unit,
 ) {
     var trip by remember { mutableStateOf<Trip?>(null) }
     var days by remember { mutableStateOf<List<Day>>(emptyList()) }
@@ -815,8 +818,7 @@ private fun TripDetailScreen(
                 TripPrepStrip()
                 TripDetailNavRow(
                     onSchedule = { /* 같은 화면의 일정 섹션을 노출 — 별도 동작 없음 */ },
-                    onMap = { /* 지도 탭은 추후 */ },
-                    onPhotos = { /* 사진 탭은 추후 */ },
+                    onMap = onOpenMap,
                     onNotes = { onOpenNotes(tripId) },
                     onExpenses = { onOpenExpenses(tripId) },
                 )
@@ -940,26 +942,20 @@ private fun TripPrepStrip() {
 }
 
 /**
- * 여행 상세 화면 상단의 가로 스크롤 탭 행. 일정/지도/사진/메모/지출 5개 탭을
- * 칩 모양으로 노출한다. 미구현 탭(지도/사진)은 Toast로 안내한다.
+ * 여행 상세 화면 상단의 가로 스크롤 탭 행. 일정/지도/메모/지출 4개 탭을
+ * 칩 모양으로 노출한다.
  */
 @Composable
 private fun TripDetailNavRow(
     onSchedule: () -> Unit,
     onMap: () -> Unit,
-    onPhotos: () -> Unit,
     onNotes: () -> Unit,
     onExpenses: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val notReady: () -> Unit = remember(context) {
-        { Toast.makeText(context, "준비 중인 기능이에요", Toast.LENGTH_SHORT).show() }
-    }
     data class Tab(val label: String, val icon: ImageVector, val onClick: () -> Unit)
     val tabs = listOf(
         Tab("일정", Icons.Default.CalendarMonth, onSchedule),
-        Tab("지도", Icons.Default.Place) { onMap(); notReady() },
-        Tab("사진", Icons.Default.CameraAlt) { onPhotos(); notReady() },
+        Tab("지도", Icons.Default.Place, onMap),
         Tab("메모", Icons.Default.Note, onNotes),
         Tab("지출", Icons.Default.Wallet, onExpenses),
     )
@@ -2094,4 +2090,164 @@ private fun SbField(
             )
         }
     }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Trip map (OpenStreetMap via Leaflet WebView)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * tripId 의 모든 day → schedule.location 을 모아서 OSM(Leaflet) 지도에
+ * 마커로 표시한다. 좌표가 없으면 trip.destination 을 geocode 로 조회해서
+ * 중심 좌표로 사용한다. 모두 실패하면 일본 중부를 디폴트로 보여준다.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TripMapScreen(
+    api: JourneyApi,
+    tripId: String,
+    onBack: () -> Unit,
+) {
+    data class MapMarker(val lat: Double, val lng: Double, val title: String)
+
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var markers by remember { mutableStateOf<List<MapMarker>>(emptyList()) }
+    var center by remember { mutableStateOf(35.0 to 138.0) }
+    var zoom by remember { mutableStateOf(5) }
+
+    LaunchedEffect(tripId) {
+        loading = true
+        runCatching {
+            val trip = api.getTrip(tripId).trip
+            val days = api.listDays(tripId).days
+            val collected = mutableListOf<MapMarker>()
+            for (d in days) {
+                val schedules = runCatching { api.listSchedules(d.id).schedules }.getOrDefault(emptyList())
+                for (s in schedules) {
+                    val loc = s.location
+                    if (loc != null && (loc.latitude != 0.0 || loc.longitude != 0.0)) {
+                        collected += MapMarker(loc.latitude, loc.longitude, s.placeName ?: s.title)
+                    }
+                }
+            }
+            collected to trip
+        }
+            .onSuccess { (list, trip) ->
+                markers = list
+                if (list.isNotEmpty()) {
+                    center = list.first().lat to list.first().lng
+                    zoom = if (list.size > 1) 10 else 13
+                } else if (!trip.destination.isNullOrBlank()) {
+                    runCatching { api.geocode(trip.destination).places.firstOrNull()?.location }
+                        .getOrNull()
+                        ?.let { p ->
+                            center = p.latitude to p.longitude
+                            zoom = 11
+                        }
+                }
+                loading = false
+            }
+            .onFailure { error = it.message; loading = false }
+    }
+
+    SakuraScaffold(title = "지도", onBack = onBack) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            when {
+                loading -> CenteredLoader()
+                error != null -> ErrorState(error!!)
+                else -> {
+                    val html = remember(markers, center, zoom) {
+                        buildLeafletHtml(
+                            centerLat = center.first,
+                            centerLng = center.second,
+                            zoom = zoom,
+                            markers = markers.map { Triple(it.lat, it.lng, it.title) },
+                        )
+                    }
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                setBackgroundColor(android.graphics.Color.WHITE)
+                            }
+                        },
+                        update = { wv ->
+                            wv.loadDataWithBaseURL(
+                                "https://www.openstreetmap.org/",
+                                html,
+                                "text/html",
+                                "utf-8",
+                                null,
+                            )
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    if (markers.isEmpty()) {
+                        Text(
+                            "좌표가 등록된 일정이 없습니다.\n일정 추가 시 장소 검색에서 선택해주세요.",
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = Spacing.md, start = Spacing.base, end = Spacing.base)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.95f))
+                                .border(1.dp, Sakura100, RoundedCornerShape(12.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            color = Sakura700,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun buildLeafletHtml(
+    centerLat: Double,
+    centerLng: Double,
+    zoom: Int,
+    markers: List<Triple<Double, Double, String>>,
+): String {
+    val markersJs = markers.joinToString(",\n") { (lat, lng, title) ->
+        val safe = title.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ")
+        "[${lat}, ${lng}, '${safe}']"
+    }
+    return """
+        <!doctype html>
+        <html><head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+        <style>html,body,#map{height:100%;margin:0;padding:0;background:#fff}</style>
+        </head><body>
+        <div id="map"></div>
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        <script>
+          var map = L.map('map').setView([${centerLat}, ${centerLng}], ${zoom});
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+          }).addTo(map);
+          var pts = [
+            ${markersJs}
+          ];
+          var bounds = [];
+          pts.forEach(function(p){
+            var m = L.marker([p[0], p[1]]).addTo(map).bindPopup(p[2]);
+            bounds.push([p[0], p[1]]);
+          });
+          if (bounds.length > 1) { map.fitBounds(bounds, {padding:[24,24]}); }
+        </script>
+        </body></html>
+    """.trimIndent()
 }

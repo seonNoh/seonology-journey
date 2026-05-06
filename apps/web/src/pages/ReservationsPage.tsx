@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Plus, Trash2, Ticket } from 'lucide-react'
 import { api } from '../lib/api'
 import { ListRowsSkeleton } from '../components/LoadingPlaceholders'
+import { PlaceSearchInput } from '../components/PlaceSearchInput'
 import type {
   CreateReservationInput,
   ListReservationsResponse,
@@ -146,6 +147,12 @@ function CreateReservationModal({
     costAmount: '',
     costCurrency: 'JPY',
   })
+  const placeTypes: ReservationType[] = [
+    'RESERVATION_TYPE_HOTEL',
+    'RESERVATION_TYPE_RESTAURANT',
+    'RESERVATION_TYPE_ACTIVITY',
+  ]
+  const showPlaceSearch = placeTypes.includes(form.type)
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/30 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
@@ -191,6 +198,27 @@ function CreateReservationModal({
             value={form.confirmNumber}
             onChange={(v) => setForm({ ...form, confirmNumber: v })}
           />
+          {showPlaceSearch && (
+            <PlaceSearchInput
+              label={
+                form.type === 'RESERVATION_TYPE_HOTEL'
+                  ? '장소 검색 (호텔/료칸)'
+                  : form.type === 'RESERVATION_TYPE_RESTAURANT'
+                    ? '장소 검색 (식당)'
+                    : '장소 검색 (관광지/액티비티)'
+              }
+              value={form.vendor}
+              onChange={(v) => setForm({ ...form, vendor: v })}
+              onSelect={(p) =>
+                setForm({
+                  ...form,
+                  vendor: p.name,
+                  notes: form.notes ? form.notes : p.address,
+                })
+              }
+              placeholder="이름으로 검색"
+            />
+          )}
           <Field
             label="예약 시각"
             type="datetime-local"
