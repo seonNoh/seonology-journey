@@ -3,6 +3,10 @@ import { Plane } from 'lucide-react'
 /**
  * CuteLoader - 벚꽃(sakura) 테마에 맞춘 귀엽고 캐주얼한 로딩 UI.
  *
+ * End-to-end 자동 재배포 플로우 확인용 더미 터치: 이 주석이 배포된
+ * 파드에도 있으면 CI → ghcr → Image Updater → ArgoCD sync 가 모두
+ * 동작한 것이다.
+ *
  * 재사용 블록 3 가지를 제공:
  *  - <CuteLoader />          : inline 스피너 (여행 중인 비행기 + 흔들리는 벚꽃)
  *  - <CuteLoaderBlock />     : 카드 안에 넣는 세로 중앙 정렬 블록
