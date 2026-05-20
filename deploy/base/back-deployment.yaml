@@ -78,11 +78,24 @@ spec:
           envFrom: []
           resources:
             requests:
-              cpu: '100m'
+              # 100m이었을 때 lightsail worker(CPU requests 98%) 슬롯에 끼어들어
+              # throttling 받으며 startup 동안 probe timeout 누적. 200m으로 올려
+              # 충분히 압박 적은 노드로 스케줄되도록 함.
+              cpu: '200m'
               memory: '128Mi'
             limits:
               cpu: '500m'
               memory: '512Mi'
+          startupProbe:
+            # gRPC 서버가 의존 서비스(auth-back, member-back) 연결과 AWS SDK
+            # 초기화를 끝낼 때까지의 grace. 5s × 12 = 최대 60s. 그 안에 한 번이라도
+            # 성공하면 liveness/readiness로 전환.
+            grpc:
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 12
           livenessProbe:
             grpc:
               port: 9090
