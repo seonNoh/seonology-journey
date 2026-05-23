@@ -75,6 +75,19 @@ spec:
               value: 'seonology-auth-back.seonology-common.svc.cluster.local:9090'
             - name: MEMBER_BACK_GRPC_ADDR
               value: 'seonology-member-back.seonology-common.svc.cluster.local:9090'
+            # OpenTelemetry (traces -> OTel Collector -> Tempo)
+            - name: OTEL_SERVICE_NAME
+              value: 'seonology-journey-back'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317'
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: 'grpc'
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: 'deployment.environment=production,k8s.namespace.name=seonology-journey'
+            - name: OTEL_TRACES_SAMPLER
+              value: 'parentbased_traceidratio'
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: '1.0'
           envFrom: []
           resources:
             requests:

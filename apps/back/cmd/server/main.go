@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/prometheus/client_golang/prometheus"
@@ -24,6 +25,7 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/back/internal/social"
 	"github.com/seonNoh/seonology-journey/apps/back/internal/trip"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
@@ -33,6 +35,22 @@ import (
 func main() {
 	logger := observability.NewLogger()
 	slog.SetDefault(logger)
+
+	// OpenTelemetry tracing -> OTel Collector -> Tempo.
+	// 환경변수 미설정 시에도 default endpoint 로 try; collector 미존재 시
+	// goroutine 의 batcher 가 silent fail 하므로 부팅을 막지는 않음.
+	otelCtx, otelCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer otelCancel()
+	otelShutdown, err := observability.InitTracing(otelCtx, "seonology-journey-back")
+	if err != nil {
+		logger.Warn("otel init failed (continuing without traces)", "error", err)
+	} else {
+		defer func() {
+			sctx, c := context.WithTimeout(context.Background(), 5*time.Second)
+			defer c()
+			_ = otelShutdown(sctx)
+		}()
+	}
 
 	// Metrics
 	reg := prometheus.DefaultRegisterer
@@ -150,6 +168,7 @@ func main() {
 	journey := server.NewJourneyServer(deps)
 
 	srv := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			observability.LoggingUnaryInterceptor(logger),
 		),

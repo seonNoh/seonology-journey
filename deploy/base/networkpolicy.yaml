@@ -208,6 +208,17 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+    # OTel Collector (traces export)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opentelemetry-collector
+      ports:
+        - protocol: TCP
+          port: 4317
 ---
 # cert-manager ACME http-01 solver pods는 PodSelector 라벨이 없어 default-deny에 걸린다.
 # Traefik(kube-system) 에서 8089 로 인입을 허용해 challenge 가 통과되도록 한다.
