@@ -68,6 +68,28 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: api-allow-prometheus
+  namespace: seonology-journey
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: seonology-journey-api
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8081
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: api-to-back
   namespace: seonology-journey
 spec:
