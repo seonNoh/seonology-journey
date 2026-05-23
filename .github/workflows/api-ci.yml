@@ -35,7 +35,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.0.2
+          version: latest
           working-directory: apps/api
           args: --timeout=5m
       - run: go vet ./...
