@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/auth"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/external"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/grpcclient"
@@ -24,6 +25,7 @@ import (
 
 func main() {
 	addr := getenv("HTTP_LISTEN_ADDR", ":8080")
+	metricsAddr := getenv("METRICS_LISTEN_ADDR", ":8081")
 	backAddr := getenv("BACK_GRPC_ADDR", "seonology-journey-back:9090")
 	jwksURL := os.Getenv("KEYCLOAK_JWKS_URL") // 공란이면 dev 모드.
 	issuer := os.Getenv("KEYCLOAK_ISSUER")
@@ -51,6 +53,7 @@ func main() {
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(apimw.StructuredLogger)
+	r.Use(apimw.PrometheusMetrics)
 	r.Use(corsMiddleware)
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -106,6 +109,16 @@ func main() {
 		hub.Publish(req.Context(), &ev)
 		w.WriteHeader(http.StatusNoContent)
 	})
+
+	go func() {
+		metricsMux := http.NewServeMux()
+		metricsMux.Handle("/metrics", promhttp.Handler())
+		ms := &http.Server{Addr: metricsAddr, Handler: metricsMux, ReadHeaderTimeout: 5 * time.Second}
+		log.Printf("seonology-journey-api metrics listening on %s", metricsAddr)
+		if err := ms.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("metrics listen: %v", err)
+		}
+	}()
 
 	log.Printf("seonology-journey-api HTTP listening on %s (back=%s, jwks=%v)", addr, backAddr, jwksURL != "")
 	srv := &http.Server{Addr: addr, Handler: r, ReadHeaderTimeout: 10 * time.Second}
