@@ -48,16 +48,8 @@ spec:
             summary: 'DynamoDB throttle detected'
             description: 'Throttled requests: {{ $value }}/s'
 
-        - alert: JourneyErrorLogSpike
-          expr: |
-            sum(rate({namespace="seonology-journey"} |= "level=error" [5m])) > 5
-          for: 3m
-          labels:
-            severity: warning
-            team: seonology
-          annotations:
-            summary: 'Error log spike in seonology-journey'
-            description: 'Error logs: {{ $value }}/s'
+        # JourneyErrorLogSpike: LogQL 쿼리이므로 Loki Ruler 도입 후 LokiRule 로 분리.
+        # Prometheus PromQL 은 |= 미지원이라 PrometheusRule 에 둘 수 없음.
 
         - alert: JourneyPodRestart
           expr: |
