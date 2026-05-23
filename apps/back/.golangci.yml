@@ -10,7 +10,7 @@ formatters:
     - goimports
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - errcheck
     - govet
@@ -30,9 +30,10 @@ linters:
         - 'all'
         - '-SA1019'
         - '-ST1003'
+  exclusions:
+    paths:
+      - vendor
 
 issues:
-  exclude-dirs:
-    - vendor
   max-issues-per-linter: 0
   max-same-issues: 0
