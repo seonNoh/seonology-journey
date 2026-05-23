@@ -66,6 +66,19 @@ spec:
               value: 'https://auth.seonology.com/realms/seonology-journey'
             - name: KEYCLOAK_AUDIENCE
               value: 'seonology-journey'
+            # OpenTelemetry (traces -> OTel Collector -> Tempo)
+            - name: OTEL_SERVICE_NAME
+              value: 'seonology-journey-api'
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: 'http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317'
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: 'grpc'
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: 'deployment.environment=production,k8s.namespace.name=seonology-journey'
+            - name: OTEL_TRACES_SAMPLER
+              value: 'parentbased_traceidratio'
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: '1.0' # 시범 100%, 검증 후 0.1~0.2 로 축소
           resources:
             requests:
               cpu: '100m'

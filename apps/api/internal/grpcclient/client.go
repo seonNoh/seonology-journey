@@ -5,14 +5,18 @@ import (
 	"context"
 
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
-// Dial - back gRPC 다이얼.
+// Dial - back gRPC 다이얼. trace context 자동 전파를 위해 otelgrpc 핸들러 부착.
 func Dial(addr string) (*grpc.ClientConn, error) {
-	return grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	return grpc.NewClient(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	)
 }
 
 // NewJourneyClient - JourneyService 클라이언트.

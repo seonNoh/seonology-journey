@@ -17,8 +17,11 @@ import (
 	"github.com/seonNoh/seonology-journey/apps/api/internal/grpcclient"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/handler"
 	apimw "github.com/seonNoh/seonology-journey/apps/api/internal/middleware"
+	"github.com/seonNoh/seonology-journey/apps/api/internal/telemetry"
 	"github.com/seonNoh/seonology-journey/apps/api/internal/ws"
 	journeyv1 "github.com/seonNoh/seonology-journey/proto/gen/go/journey/v1"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -30,6 +33,22 @@ func main() {
 	jwksURL := os.Getenv("KEYCLOAK_JWKS_URL") // 공란이면 dev 모드.
 	issuer := os.Getenv("KEYCLOAK_ISSUER")
 	aud := os.Getenv("KEYCLOAK_AUDIENCE")
+
+	// OpenTelemetry tracing. OTEL_EXPORTER_OTLP_ENDPOINT 미설정 시에도
+	// New() 가 default (localhost:4317) 로 try. Collector 미존재 환경 대비
+	// goroutine 의 batcher 가 silent fail 하므로 부팅을 막지는 않음.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	otelShutdown, err := telemetry.InitTracing(ctx, "seonology-journey-api")
+	if err != nil {
+		log.Printf("otel init: %v (continuing without traces)", err)
+	} else {
+		defer func() {
+			shutdownCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+			defer c()
+			_ = otelShutdown(shutdownCtx)
+		}()
+	}
 
 	conn, err := grpcclient.Dial(backAddr)
 	if err != nil {
@@ -120,8 +139,25 @@ func main() {
 		}
 	}()
 
+	// otelhttp 로 전체 chi 라우터를 wrap. 라우트 매칭 후 chi 의 RoutePattern 으로
+	// span 이름 update (cardinality 제어: /trips/{tripId} 등 path 변수 일반화).
+	handler := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			r.ServeHTTP(w, req)
+			if route := chi.RouteContext(req.Context()).RoutePattern(); route != "" {
+				if span := trace.SpanFromContext(req.Context()); span.IsRecording() {
+					span.SetName(req.Method + " " + route)
+				}
+			}
+		}),
+		"http",
+		otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+			return req.Method + " " + req.URL.Path
+		}),
+	)
+
 	log.Printf("seonology-journey-api HTTP listening on %s (back=%s, jwks=%v)", addr, backAddr, jwksURL != "")
-	srv := &http.Server{Addr: addr, Handler: r, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("listen: %v", err)
 	}
