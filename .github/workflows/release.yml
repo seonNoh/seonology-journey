@@ -18,6 +18,7 @@ permissions:
   issues: write
   pull-requests: write
   packages: write
+  id-token: write
 
 jobs:
   release:
@@ -40,6 +41,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
+      - name: Import Firebase secrets from Vault
+        uses: hashicorp/vault-action@v3
+        with:
+          url: https://vault.seonology.com
+          method: jwt
+          path: github-actions
+          role: k3s-managed-repos
+          secrets: |
+            secret/data/ci/${{ github.event.repository.name }}/firebase app-id | FIREBASE_APP_ID ;
+            secret/data/ci/${{ github.event.repository.name }}/firebase service-account-b64 | FB_SA_B64
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -115,13 +126,16 @@ jobs:
       # 액션이 빈 문자열을 받아 실패한다. continue-on-error 로 감싸서
       # 릴리즈 전체가 깨지는 걸 막는다 (APK 는 이미 GitHub Release 에
       # 첨부된 상태이므로 이 스텝 실패는 치명적이지 않다).
+      - name: Decode Firebase service account
+        if: steps.semrel.outputs.released == 'true' && matrix.app == 'android'
+        run: printf '%s' "${FB_SA_B64}" | base64 -d > "${RUNNER_TEMP}/fb-sa.json"
       - name: upload apk to Firebase App Distribution
         if: steps.semrel.outputs.released == 'true' && matrix.app == 'android'
         continue-on-error: true
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId: ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          appId: ${{ env.FIREBASE_APP_ID }}
+          serviceCredentialsFile: ${{ runner.temp }}/fb-sa.json
           groups: internal
           file: apps/android/app/build/outputs/apk/release/app-release.apk
           releaseNotes: |
