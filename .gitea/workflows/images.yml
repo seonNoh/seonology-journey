@@ -20,45 +20,11 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      fail-fast: true
-      matrix:
-        include:
-          - component: api
-            image: git.seonology.com/seonology/seonology-journey-api
-            file: apps/api/Dockerfile
-            tag_prefix: api
-          - component: back
-            image: git.seonology.com/seonology/seonology-journey-back
-            file: apps/back/Dockerfile
-            tag_prefix: back
-          - component: web
-            image: git.seonology.com/seonology/seonology-journey-web
-            file: apps/web/Dockerfile
-            tag_prefix: web
     steps:
       - name: Checkout
         uses: https://gitea.com/actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Resolve image tags
-        id: meta
-        env:
-          IMAGE: ${{ matrix.image }}
-          PREFIX: ${{ matrix.tag_prefix }}
-          SHA: ${{ gitea.sha }}
-        run: |
-          set -euo pipefail
-          release_tag="$(git tag --list "${PREFIX}-v[0-9]*" --sort=-v:refname | head -n1)"
-          printf '%s\n' "$release_tag" | grep -Eq "^${PREFIX}-v[0-9]+\.[0-9]+\.[0-9]+$"
-          version="${release_tag#"${PREFIX}-v"}"
-          short_sha="${SHA:0:7}"
-          {
-            printf 'inspect_ref=%s\n' "$IMAGE:$version"
-            printf 'tags=%s\n' "$IMAGE:$version,$IMAGE:sha-$short_sha,$IMAGE:latest"
-          } >> "$GITEA_OUTPUT"
 
       - name: Set up QEMU
         uses: https://gitea.com/docker/setup-qemu-action@v3
@@ -69,19 +35,41 @@ jobs:
       - name: Log in to Gitea Registry
         run: printf '%s' '${{ secrets.PACKAGE_TOKEN }}' | docker login "$REGISTRY" --username '${{ secrets.PACKAGE_USER }}' --password-stdin
 
-      - name: Build and publish OCI index
-        uses: https://gitea.com/docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.file }}
-          push: true
-          provenance: false
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-
-      - name: Verify OCI index platforms
+      - name: Build, publish and verify OCI indexes serially
+        env:
+          REF_NAME: ${{ gitea.ref_name }}
+          REF_TYPE: ${{ gitea.ref_type }}
+          SHA: ${{ gitea.sha }}
         run: |
           set -euo pipefail
-          raw="$(docker buildx imagetools inspect '${{ steps.meta.outputs.inspect_ref }}' --raw)"
-          printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "amd64")' >/dev/null
-          printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "arm64")' >/dev/null
+          for spec in \
+            'api|apps/api/Dockerfile|git.seonology.com/seonology/seonology-journey-api|api' \
+            'back|apps/back/Dockerfile|git.seonology.com/seonology/seonology-journey-back|back' \
+            'web|apps/web/Dockerfile|git.seonology.com/seonology/seonology-journey-web|web'; do
+            IFS='|' read -r component file image prefix <<< "$spec"
+            if [[ "$REF_TYPE" == "tag" && "$REF_NAME" != "${prefix}-v"* ]]; then
+              continue
+            fi
+            if [[ "$REF_TYPE" == "tag" ]]; then
+              release_tag="$REF_NAME"
+            else
+              release_tag="$(git tag --list "${prefix}-v[0-9]*" --sort=-v:refname | head -n1)"
+            fi
+            printf '%s\n' "$release_tag" | grep -Eq "^${prefix}-v[0-9]+\.[0-9]+\.[0-9]+$"
+            version="${release_tag#"${prefix}-v"}"
+            short_sha="${SHA:0:7}"
+            inspect_ref="$image:$version"
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              --provenance=false \
+              --file "$file" \
+              --push \
+              --tag "$inspect_ref" \
+              --tag "$image:sha-$short_sha" \
+              --tag "$image:latest" \
+              .
+            raw="$(docker buildx imagetools inspect "$inspect_ref" --raw)"
+            printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "amd64")' >/dev/null
+            printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "arm64")' >/dev/null
+            printf 'published %s at %s\n' "$component" "$inspect_ref"
+          done

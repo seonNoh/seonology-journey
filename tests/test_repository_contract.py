@@ -145,8 +145,9 @@ class RepositoryContractTest(unittest.TestCase):
             self.assertIn(token, joined)
         for forbidden in ("ghcr.io/seonnoh", "GITHUB_TOKEN", "api.github.com", "actions/setup-go", "actions/setup-node"):
             self.assertNotIn(forbidden, joined)
-        self.assertIn("max-parallel: 1", bodies["images.yml"])
-        self.assertEqual(3, bodies["images.yml"].count("component:"))
+        self.assertNotIn("matrix:", bodies["images.yml"])
+        self.assertIn("for spec in", bodies["images.yml"])
+        self.assertEqual(3, bodies["images.yml"].count("git.seonology.com/seonology/seonology-journey-"))
         self.assertIn("fetch-depth: 0", bodies["ci.yml"])
 
     def test_policy_for_new_migration_files(self) -> None:
@@ -162,7 +163,7 @@ class RepositoryContractTest(unittest.TestCase):
             ROOT / "CONTRIBUTING.md",
         ]
         targets.extend((ROOT / ".gitea").rglob("*"))
-        targets.extend((ROOT / "docs" / "svg").glob("*.svg"))
+        targets.extend((ROOT / "assets" / "diagrams").glob("*.svg"))
         for path in (item for item in targets if item.is_file()):
             body = path.read_text(encoding="utf-8", errors="ignore")
             self.assertIsNone(emoji.search(body), str(path.relative_to(ROOT)))
