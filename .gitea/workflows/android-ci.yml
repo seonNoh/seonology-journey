@@ -1,0 +1,32 @@
+name: android-ci
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['apps/android/**', '.gitea/workflows/android-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: journey-android-${{ gitea.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: https://gitea.com/actions/checkout@v4
+
+      - name: Test and assemble debug application
+        run: |
+          set -o pipefail
+          tar --exclude=.git -cf - . | docker run --rm -i --platform linux/amd64 ghcr.io/cirruslabs/android-sdk:35 sh -c '
+            set -eu
+            mkdir -p /workspace
+            tar -xf - -C /workspace
+            cd /workspace/apps/android
+            ./gradlew --no-daemon test assembleDebug
+          '

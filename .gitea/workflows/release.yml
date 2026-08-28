@@ -1,0 +1,37 @@
+name: release
+
+on:
+  push:
+    tags: ['api-v*', 'back-v*', 'web-v*', 'android-v*']
+
+permissions:
+  contents: read
+  releases: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Gitea release
+        env:
+          API_URL: ${{ gitea.api_url }}
+          REPOSITORY: ${{ gitea.repository }}
+          REF: ${{ gitea.ref }}
+          TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${REF#refs/tags/}"
+          printf '%s\n' "$tag" | grep -Eq '^(api|back|web|android)-v[0-9]+\.[0-9]+\.[0-9]+$'
+          endpoint="${API_URL}/repos/${REPOSITORY}/releases/tags/${tag}"
+          http_code="$(curl --silent --show-error --output /tmp/release.json --write-out '%{http_code}' --header "Authorization: token ${TOKEN}" "${endpoint}")"
+          if [ "$http_code" = 200 ]; then
+            echo "release ${tag} already exists"
+            exit 0
+          fi
+          test "$http_code" = 404
+          payload="$(jq -n --arg tag "$tag" '{tag_name:$tag,name:$tag,body:"Gitea migration release",draft:false,prerelease:false}')"
+          curl --fail --silent --show-error --request POST \
+            --header "Authorization: token ${TOKEN}" \
+            --header 'Content-Type: application/json' \
+            --data "$payload" \
+            "${API_URL}/repos/${REPOSITORY}/releases" >/dev/null

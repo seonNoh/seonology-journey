@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: journey-ci-${{ gitea.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: https://gitea.com/actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Repository contract
+        run: |
+          set -euo pipefail
+          python3 -m unittest tests/test_repository_contract.py
+          python3 verify.py --skip-components
+
+      - name: Go services
+        run: |
+          set -o pipefail
+          tar --exclude=.git -cf - . | docker run --rm -i golang:1.25.14-bookworm sh -c '
+            set -eu
+            mkdir -p /workspace
+            tar -xf - -C /workspace
+            test "$(go env GOVERSION)" = "go1.25.14"
+            for component in api back; do
+              cd "/workspace/apps/$component"
+              go vet ./...
+              go test ./... -race -count=1
+              go build ./...
+            done
+          '
+
+      - name: Web test and build
+        run: |
+          set -o pipefail
+          tar --exclude=.git -cf - . | docker run --rm -i node:22-alpine sh -c '
+            set -eu
+            mkdir -p /workspace
+            tar -xf - -C /workspace
+            cd /workspace
+            corepack enable
+            corepack prepare pnpm@9.15.9 --activate
+            pnpm install --frozen-lockfile
+            pnpm --filter @seonology/journey-web typecheck
+            pnpm --filter @seonology/journey-web test
+            pnpm --filter @seonology/journey-web build
+          '

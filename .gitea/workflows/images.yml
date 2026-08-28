@@ -1,0 +1,87 @@
+name: images
+
+on:
+  push:
+    branches: [main]
+    tags: ['api-v*', 'back-v*', 'web-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: journey-images
+  cancel-in-progress: false
+
+env:
+  REGISTRY: git.seonology.com
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        include:
+          - component: api
+            image: git.seonology.com/seonology/seonology-journey-api
+            file: apps/api/Dockerfile
+            tag_prefix: api
+          - component: back
+            image: git.seonology.com/seonology/seonology-journey-back
+            file: apps/back/Dockerfile
+            tag_prefix: back
+          - component: web
+            image: git.seonology.com/seonology/seonology-journey-web
+            file: apps/web/Dockerfile
+            tag_prefix: web
+    steps:
+      - name: Checkout
+        uses: https://gitea.com/actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve image tags
+        id: meta
+        env:
+          IMAGE: ${{ matrix.image }}
+          PREFIX: ${{ matrix.tag_prefix }}
+          SHA: ${{ gitea.sha }}
+        run: |
+          set -euo pipefail
+          release_tag="$(git tag --list "${PREFIX}-v[0-9]*" --sort=-v:refname | head -n1)"
+          printf '%s\n' "$release_tag" | grep -Eq "^${PREFIX}-v[0-9]+\.[0-9]+\.[0-9]+$"
+          version="${release_tag#"${PREFIX}-v"}"
+          short_sha="${SHA:0:7}"
+          {
+            printf 'inspect_ref=%s\n' "$IMAGE:$version"
+            printf 'tags=%s\n' "$IMAGE:$version,$IMAGE:sha-$short_sha,$IMAGE:latest"
+          } >> "$GITEA_OUTPUT"
+
+      - name: Set up QEMU
+        uses: https://gitea.com/docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: https://gitea.com/docker/setup-buildx-action@v3
+
+      - name: Log in to Gitea Registry
+        run: printf '%s' '${{ secrets.PACKAGE_TOKEN }}' | docker login "$REGISTRY" --username '${{ secrets.PACKAGE_USER }}' --password-stdin
+
+      - name: Build and publish OCI index
+        uses: https://gitea.com/docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          provenance: false
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Verify OCI index platforms
+        run: |
+          set -euo pipefail
+          raw="$(docker buildx imagetools inspect '${{ steps.meta.outputs.inspect_ref }}' --raw)"
+          printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "amd64")' >/dev/null
+          printf '%s' "$raw" | jq -e '.manifests | any(.platform.os == "linux" and .platform.architecture == "arm64")' >/dev/null
