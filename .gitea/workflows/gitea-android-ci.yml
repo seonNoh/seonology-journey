@@ -3,7 +3,7 @@ name: android-ci
 on:
   pull_request:
     branches: [main]
-    paths: ['apps/android/**', '.gitea/workflows/android-ci.yml']
+    paths: ['apps/android/**', '.gitea/workflows/gitea-android-ci.yml']
   workflow_dispatch:
 
 permissions:
