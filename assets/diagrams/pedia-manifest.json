@@ -1,0 +1,53 @@
+{
+  "contract_version": 1,
+  "entries": [
+    {
+      "file": "service-architecture.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-service-architecture-en"
+    },
+    {
+      "file": "service-architecture.ko.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-service-architecture-ko"
+    },
+    {
+      "file": "service-architecture.ja.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-service-architecture-ja"
+    },
+    {
+      "file": "component-delivery.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-component-delivery-en"
+    },
+    {
+      "file": "component-delivery.ko.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-component-delivery-ko"
+    },
+    {
+      "file": "component-delivery.ja.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-component-delivery-ja"
+    },
+    {
+      "file": "runtime-cutover.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-runtime-cutover-en"
+    },
+    {
+      "file": "runtime-cutover.ko.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-runtime-cutover-ko"
+    },
+    {
+      "file": "runtime-cutover.ja.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-runtime-cutover-ja"
+    },
+    {
+      "file": "repository-roles.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-repository-roles-en"
+    },
+    {
+      "file": "repository-roles.ko.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-repository-roles-ko"
+    },
+    {
+      "file": "repository-roles.ja.svg",
+      "pedia_id": "svg-svg-gtm-live-65-journey-repository-roles-ja"
+    }
+  ]
+}

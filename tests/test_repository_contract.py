@@ -53,7 +53,7 @@ class RepositoryContractTest(unittest.TestCase):
             ".gitea/workflows/images.yml",
             ".gitea/workflows/android-ci.yml",
             ".gitea/workflows/release.yml",
-            "docs/svg/pedia-manifest.json",
+            "assets/diagrams/pedia-manifest.json",
             "tools/generate_phase_b_svgs.py",
             "verify.py",
         }
@@ -71,7 +71,7 @@ class RepositoryContractTest(unittest.TestCase):
             diagrams.append(
                 tuple(
                     re.sub(r"\.(?:ko|ja)\.svg$", ".svg", item)
-                    for item in re.findall(r"!\[[^]]*]\((docs/svg/[^)]+)\)", body)
+                    for item in re.findall(r"!\[[^]]*]\((assets/diagrams/[^)]+)\)", body)
                 )
             )
         self.assertEqual(heading_shapes[0], heading_shapes[1])
@@ -81,7 +81,7 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertEqual(4, len(diagrams[0]))
 
     def test_relief_svg_set_is_self_contained_and_deterministic(self) -> None:
-        svg_dir = ROOT / "docs" / "svg"
+        svg_dir = ROOT / "assets" / "diagrams"
         actual = {path.name for path in svg_dir.glob("*.svg")}
         self.assertEqual(SVG_FILES, actual)
         all_ids: set[str] = set()
@@ -107,7 +107,9 @@ class RepositoryContractTest(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
 
     def test_pedia_manifest_has_twelve_stable_ids(self) -> None:
-        manifest = json.loads((ROOT / "docs/svg/pedia-manifest.json").read_text(encoding="utf-8"))
+        manifest = json.loads(
+            (ROOT / "assets/diagrams/pedia-manifest.json").read_text(encoding="utf-8")
+        )
         entries = manifest["entries"]
         identifiers = [entry["pedia_id"] for entry in entries]
         self.assertEqual(12, len(entries))

@@ -6,13 +6,13 @@ Seonology Journey is a private travel planning and memory monorepo. It combines 
 
 ## Architecture
 
-![Service architecture](docs/svg/service-architecture.svg)
+![Service architecture](assets/diagrams/service-architecture.svg)
 
 The web and Android clients use the API service. The API delegates durable data and media work to the back service over gRPC. AWS DynamoDB and S3 provide production persistence.
 
 ## Components
 
-![Component delivery](docs/svg/component-delivery.svg)
+![Component delivery](assets/diagrams/component-delivery.svg)
 
 | Path           | Role                           | Runtime output                   |
 | -------------- | ------------------------------ | -------------------------------- |
@@ -56,7 +56,7 @@ The verifier checks the multilingual documentation, deterministic Relief diagram
 
 ## Delivery
 
-![Runtime cutover](docs/svg/runtime-cutover.svg)
+![Runtime cutover](assets/diagrams/runtime-cutover.svg)
 
 Gitea is the source of truth. Gitea Actions validates the repository and publishes the API, back, and web images serially as `linux/amd64` and `linux/arm64` OCI indexes. GitHub is maintained as a push mirror with GitHub Actions disabled.
 
@@ -66,7 +66,7 @@ The production workload is managed by the central `seonology-k3s` GitOps reposit
 
 ## Repository policy
 
-![Repository roles](docs/svg/repository-roles.svg)
+![Repository roles](assets/diagrams/repository-roles.svg)
 
 - Use Conventional Commits with an explicit scope.
 - Preserve `.github/workflows` as migration evidence.

@@ -6,13 +6,13 @@ Seonology Journey는 개인 여행 계획과 추억 보관을 위한 비공개 �
 
 ## 아키텍처
 
-![서비스 아키텍처](docs/svg/service-architecture.ko.svg)
+![서비스 아키텍처](assets/diagrams/service-architecture.ko.svg)
 
 웹과 Android 클라이언트는 API 서비스를 사용합니다. API는 영속 데이터와 미디어 처리를 gRPC를 통해 back 서비스에 위임합니다. 운영 환경의 데이터는 AWS DynamoDB와 S3에 저장합니다.
 
 ## 컴포넌트
 
-![컴포넌트 배포](docs/svg/component-delivery.ko.svg)
+![컴포넌트 배포](assets/diagrams/component-delivery.ko.svg)
 
 | 경로           | 역할                         | 런타임 산출물              |
 | -------------- | ---------------------------- | -------------------------- |
@@ -56,7 +56,7 @@ python3 verify.py
 
 ## 배포
 
-![운영 전환](docs/svg/runtime-cutover.ko.svg)
+![운영 전환](assets/diagrams/runtime-cutover.ko.svg)
 
 Gitea가 기준 저장소입니다. Gitea Actions는 저장소를 검증한 뒤 API, back, web 이미지를 직렬로 게시하며, 각 이미지는 `linux/amd64`와 `linux/arm64` OCI index를 포함합니다. GitHub는 Actions를 비활성화한 push mirror로 유지합니다.
 
@@ -66,7 +66,7 @@ Gitea가 기준 저장소입니다. Gitea Actions는 저장소를 검증한 뒤 
 
 ## 저장소 정책
 
-![저장소 역할](docs/svg/repository-roles.ko.svg)
+![저장소 역할](assets/diagrams/repository-roles.ko.svg)
 
 - 명시적인 scope가 있는 Conventional Commits를 사용합니다.
 - 이전 증거인 `.github/workflows`의 바이트를 보존합니다.

@@ -13,4 +13,4 @@ The three README files must use the same heading hierarchy and equivalent diagra
 9. Repository policy
 10. License
 
-English uses `README.md`, Korean uses `README.ko.md`, and Japanese uses `README.ja.md`. Each language references its corresponding Relief SVG variant under `docs/svg`.
+English uses `README.md`, Korean uses `README.ko.md`, and Japanese uses `README.ja.md`. Each language references its corresponding Relief SVG variant under `assets/diagrams`.

@@ -6,13 +6,13 @@ Seonology Journeyは、個人の旅行計画と記録を管理するプライベ
 
 ## アーキテクチャ
 
-![サービス構成](docs/svg/service-architecture.ja.svg)
+![サービス構成](assets/diagrams/service-architecture.ja.svg)
 
 WebとAndroidクライアントはAPIサービスを利用します。APIは永続データとメディア処理をgRPC経由でbackサービスへ委譲します。本番データはAWS DynamoDBとS3に保存します。
 
 ## コンポーネント
 
-![コンポーネント配布](docs/svg/component-delivery.ja.svg)
+![コンポーネント配布](assets/diagrams/component-delivery.ja.svg)
 
 | パス           | 役割                             | 実行成果物                   |
 | -------------- | -------------------------------- | ---------------------------- |
@@ -56,7 +56,7 @@ python3 verify.py
 
 ## 配布
 
-![本番切替](docs/svg/runtime-cutover.ja.svg)
+![本番切替](assets/diagrams/runtime-cutover.ja.svg)
 
 Giteaを正本とします。Gitea Actionsはリポジトリを検証した後、API、back、webイメージを直列に公開します。各イメージは`linux/amd64`と`linux/arm64`のOCI indexを含みます。GitHubはActionsを無効化したpush mirrorとして維持します。
 
@@ -66,7 +66,7 @@ Giteaを正本とします。Gitea Actionsはリポジトリを検証した後�
 
 ## リポジトリ方針
 
-![リポジトリ役割](docs/svg/repository-roles.ja.svg)
+![リポジトリ役割](assets/diagrams/repository-roles.ja.svg)
 
 - 明示的なscopeを持つConventional Commitsを使用します。
 - 移行証跡となる`.github/workflows`のバイト列を保存します。
